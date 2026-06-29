@@ -33,3 +33,4 @@ export async function scrapeUrl(url: string): Promise<ScrapedProduct> {
 }
 
 export type { ScrapedProduct, Scraper, StoreId } from "./types";
+export { NoProductDataError, assertHasProductData } from "./types";

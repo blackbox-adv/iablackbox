@@ -17,7 +17,7 @@ import {
 
 export const temuScraper: Scraper = {
   store: "temu",
-  matches: (url) => /temu\.com/i.test(url),
+  matches: (url) => /temu\.(com|to)/i.test(url),
   async scrape(url) {
     const page = await fetchPage(url);
     const html = page.html ?? "";

@@ -8,7 +8,7 @@ import {
   getAiTone,
   ensureUniqueSlug,
 } from "@/lib/api-helpers";
-import { scrapeUrl } from "@/lib/scraper";
+import { scrapeUrl, assertHasProductData, NoProductDataError } from "@/lib/scraper";
 import { scrapedToAnalysisInput, analyzeProduct } from "@/lib/ai-analysis";
 
 interface ImportBody {
@@ -37,6 +37,18 @@ export async function POST(req: NextRequest) {
         { error: `Failed to scrape URL: ${msg}` },
         { status: 500 }
       );
+    }
+
+    // 2b. Guard: refuse to create empty products. If the store returned a
+    // generic shell / 404 / JS-only page with no real product data, tell the
+    // admin clearly instead of saving a fake product.
+    try {
+      assertHasProductData(scraped);
+    } catch (err) {
+      if (err instanceof NoProductDataError) {
+        return NextResponse.json({ error: err.message }, { status: 422 });
+      }
+      throw err;
     }
 
     // 3. AI tone setting.

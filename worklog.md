@@ -182,3 +182,21 @@ End-to-end verification (agent-browser):
 
 Stage Summary:
 - BLACKBOX V2 is real-data-only. Products come exclusively from admin-imported affiliate URLs (Amazon/Temu/Falabella/generic) via real web scraping (z-ai page_reader + JSON-LD parsing). AI analysis never invents — missing data shows "No disponible". Architecture is modular (scraper registry ready for official API swap) and scalable (schema supports price history, favorites, alerts, scheduled offers, multi-currency, user roles). Note: Amazon/Falabella actively block automated readers (anti-bot), so real product data extraction depends on the store's accessibility; the architecture is designed so official API adapters can be dropped in without rewriting the app.
+
+---
+Task ID: v2-fix
+Agent: main
+Task: Fix Temu short-link detection + add no-data guard + clean all seeded/empty products
+
+Work Log:
+- Diagnosed: temu.to short link resolves to temu.com but Temu is a 100% JS-rendered SPA — page_reader returns 1.9MB HTML shell with generic homepage title and NO product data (no "reloj", no price). Confirmed via direct z-ai page_reader test.
+- Fixed detectStore() + temuScraper.matches() to recognize temu.to (short links).
+- Added NoProductDataError + assertHasProductData() guard in src/lib/scraper/types.ts: refuses to save a product when the scraped page has no real product name AND no price (detects generic titles like "Temu | Explore...", "Page Not Found", "Documento no encontrado", "Just a moment" cloudflare, etc.).
+- Wired guard into POST /api/products/import (returns 422 with clear user-facing message) and refreshProduct() (throws instead of wiping existing product).
+- Deleted ALL 19 products (13 V1 seeded + 6 bad V2 imports) — DB now has 0 products. Kept config (home sections, affiliates, ai settings).
+- Verified: POST /api/products/import 422 in 2.6s for temu.to link, DB count stays 0, toast shows clear error message to admin.
+- Empty admin state shows "Aún no hay productos / Importa el primero".
+- `bun run lint` clean.
+
+Stage Summary:
+- BLACKBOX now refuses to create fake/empty products. Temu (and Amazon when blocked) return a clear error explaining the store blocks automated readers. The user can: (a) import from a store that returns server-rendered HTML, (b) enter product data manually via the edit dialog, or (c) integrate official affiliate APIs later (architecture is ready). DB is clean — only real imported products will appear.

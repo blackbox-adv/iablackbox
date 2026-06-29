@@ -1,7 +1,7 @@
 // BLACKBOX API shared helpers — parse DB rows and fetch products with relations.
 import { db } from "@/lib/db";
 import type { Product, Offer, AiScore, AiTone, Faq } from "@/lib/types";
-import { scrapeUrl } from "@/lib/scraper";
+import { scrapeUrl, assertHasProductData } from "@/lib/scraper";
 import {
   analyzeProduct,
   scrapedToAnalysisInput,
@@ -307,6 +307,10 @@ export async function refreshProduct(
 
   // 2. Re-scrape.
   const scraped: ScrapedProduct = await scrapeUrl(product.sourceUrl);
+
+  // 2b. Guard: if the store now returns no product data (blocked / JS-only),
+  // surface a clear error rather than wiping the existing product with nulls.
+  assertHasProductData(scraped);
 
   // 3. Build analysis input from scraped + EXISTING offers (filter out the
   //    source store's old offer, since we're replacing it).

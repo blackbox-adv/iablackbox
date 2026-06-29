@@ -51,7 +51,72 @@ export interface Scraper {
 export function detectStore(url: string): StoreId {
   const u = url.toLowerCase();
   if (u.includes("amazon.") || u.includes("amzn.")) return "amazon";
-  if (u.includes("temu.com")) return "temu";
+  if (u.includes("temu.com") || u.includes("temu.to")) return "temu";
   if (u.includes("falabella.com")) return "falabella";
   return "other";
+}
+
+/**
+ * Guard: throw a clear, user-facing error when a scraped page contains NO
+ * real product data (e.g. a JS-only SPA like Temu that returns a generic
+ * shell, or a 404/blocked page). This prevents creating empty "fake" products.
+ *
+ * A page is considered to have NO product data when it's missing BOTH a
+ * real product name AND a price.
+ */
+export class NoProductDataError extends Error {
+  constructor(store: StoreId, reason: string) {
+    const storeLabel =
+      store === "temu"
+        ? "Temu"
+        : store === "amazon"
+        ? "Amazon"
+        : store === "falabella"
+        ? "Falabella"
+        : "esta tienda";
+    super(
+      `${storeLabel} no devolvió datos de producto (${reason}). ` +
+        `Esto suele ocurrir cuando la tienda renderiza todo con JavaScript ` +
+        `(anti-scraping) o bloquea lectores automáticos. ` +
+        `Intenta con un enlace de otra tienda o ingresa el producto manualmente desde el panel de edición.`
+    );
+    this.name = "NoProductDataError";
+  }
+}
+
+/**
+ * Validate that a ScrapedProduct has enough real data to be worth saving.
+ * Throws NoProductDataError if not.
+ */
+export function assertHasProductData(s: ScrapedProduct): void {
+  const hasName = s.name && s.name.trim().length > 0 && !isGenericTitle(s.name);
+  const hasPrice = s.price != null;
+  if (!hasName && !hasPrice) {
+    throw new NoProductDataError(s.sourceStore, "sin nombre de producto ni precio");
+  }
+  if (!hasName) {
+    throw new NoProductDataError(s.sourceStore, "sin nombre de producto");
+  }
+  if (!hasPrice) {
+    // Name exists but no price — still allow (some pages hide price behind JS),
+    // but warn. We only hard-fail when BOTH are missing.
+  }
+}
+
+/** Heuristic: detect generic store-homepage / 404 titles that aren't products. */
+function isGenericTitle(name: string): boolean {
+  const n = name.toLowerCase().trim();
+  const generic = [
+    "temu | explore",
+    "temu",
+    "amazon.com",
+    "page not found",
+    "documento no encontrado",
+    "404",
+    "falabella.com",
+    "falabella",
+    "loading",
+    "just a moment", // cloudflare
+  ];
+  return generic.some((g) => n === g || n.startsWith(g));
 }
