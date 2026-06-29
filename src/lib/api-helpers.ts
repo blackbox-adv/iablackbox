@@ -1,6 +1,12 @@
 // BLACKBOX API shared helpers — parse DB rows and fetch products with relations.
 import { db } from "@/lib/db";
-import type { Product, Offer, AiScore } from "@/lib/types";
+import type { Product, Offer, AiScore, AiTone, Faq } from "@/lib/types";
+import { scrapeUrl } from "@/lib/scraper";
+import {
+  analyzeProduct,
+  scrapedToAnalysisInput,
+} from "@/lib/ai-analysis";
+import type { ScrapedProduct } from "@/lib/scraper/types";
 
 /**
  * Parse a raw Prisma Product row into a clean Product by JSON-parsing the
@@ -10,6 +16,10 @@ export function parseProduct(p: any): Product {
   let images: string[] = [];
   let features: string[] = [];
   let specs: Record<string, string> = {};
+  let advantages: string[] = [];
+  let disadvantages: string[] = [];
+  let useCases: string[] = [];
+  let faqs: Faq[] = [];
   try {
     images = Array.isArray(p.images) ? p.images : JSON.parse(p.images ?? "[]");
   } catch {
@@ -26,6 +36,32 @@ export function parseProduct(p: any): Product {
     specs = typeof p.specs === "object" ? p.specs : JSON.parse(p.specs ?? "{}");
   } catch {
     specs = {};
+  }
+  try {
+    advantages = Array.isArray(p.advantages)
+      ? p.advantages
+      : JSON.parse(p.advantages ?? "[]");
+  } catch {
+    advantages = [];
+  }
+  try {
+    disadvantages = Array.isArray(p.disadvantages)
+      ? p.disadvantages
+      : JSON.parse(p.disadvantages ?? "[]");
+  } catch {
+    disadvantages = [];
+  }
+  try {
+    useCases = Array.isArray(p.useCases)
+      ? p.useCases
+      : JSON.parse(p.useCases ?? "[]");
+  } catch {
+    useCases = [];
+  }
+  try {
+    faqs = Array.isArray(p.faqs) ? p.faqs : JSON.parse(p.faqs ?? "[]");
+  } catch {
+    faqs = [];
   }
 
   const offers: Offer[] | undefined = p.offers
@@ -62,6 +98,24 @@ export function parseProduct(p: any): Product {
     specs,
     isActive: p.isActive,
     isViral: p.isViral,
+    // V2 sourcing & SEO
+    sourceUrl: p.sourceUrl ?? null,
+    sourceStore: p.sourceStore ?? null,
+    slug: p.slug ?? null,
+    isFeatured: p.isFeatured ?? false,
+    lastFetchedAt:
+      p.lastFetchedAt instanceof Date
+        ? p.lastFetchedAt.toISOString()
+        : p.lastFetchedAt != null
+          ? String(p.lastFetchedAt)
+          : null,
+    metaTitle: p.metaTitle ?? null,
+    metaDescription: p.metaDescription ?? null,
+    // V2 AI analysis
+    advantages,
+    disadvantages,
+    useCases,
+    faqs,
     createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : String(p.createdAt),
     updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : String(p.updatedAt),
     offers,
@@ -177,4 +231,196 @@ export async function fetchProducts(
   ]);
 
   return { products: rows.map(parseProduct), total };
+}
+
+// ---------- V2: refresh / re-scrape shared logic ----------
+
+/**
+ * Read the configured AI tone from the AiSetting table (default "simple").
+ */
+export async function getAiTone(): Promise<AiTone> {
+  const setting = await db.aiSetting.findUnique({
+    where: { key: "ai_tone" },
+  });
+  const value = setting?.value;
+  if (
+    value === "simple" ||
+    value === "tecnico" ||
+    value === "vendedor" ||
+    value === "neutral"
+  ) {
+    return value;
+  }
+  return "simple";
+}
+
+/**
+ * Ensure a slug is unique. If `slug` already exists on another product,
+ * append `-2`, `-3`, … until a free slug is found.
+ */
+export async function ensureUniqueSlug(
+  slug: string,
+  excludeProductId?: string
+): Promise<string> {
+  const base = slug || "producto";
+  let candidate = base;
+  let suffix = 2;
+  // Loop until we find a slug not used by another product.
+  for (;;) {
+    const existing = await db.product.findUnique({
+      where: { slug: candidate },
+      select: { id: true },
+    });
+    if (!existing || existing.id === excludeProductId) {
+      return candidate;
+    }
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+    // Safety valve to avoid infinite loops.
+    if (suffix > 1000) return `${base}-${Date.now()}`;
+  }
+}
+
+/**
+ * Re-fetch a product's sourceUrl and update changed fields in DB.
+ * Used by POST /api/products/[id]/refresh and POST /api/products/bulk-refresh.
+ *
+ * Returns the refreshed Product (with relations), or throws on hard failure.
+ */
+export async function refreshProduct(
+  id: string
+): Promise<Product> {
+  // 1. Get the product with offers + aiScores.
+  const product = await db.product.findUnique({
+    where: { id },
+    include: {
+      offers: true,
+      aiScores: true,
+    },
+  });
+  if (!product) {
+    throw new Error("Product not found");
+  }
+  if (!product.sourceUrl) {
+    throw new Error("Product has no sourceUrl to refresh");
+  }
+
+  // 2. Re-scrape.
+  const scraped: ScrapedProduct = await scrapeUrl(product.sourceUrl);
+
+  // 3. Build analysis input from scraped + EXISTING offers (filter out the
+  //    source store's old offer, since we're replacing it).
+  const existingOffers: Offer[] = product.offers
+    .filter((o) => o.store !== scraped.sourceStore)
+    .map((o) => ({
+      id: o.id,
+      productId: o.productId,
+      store: o.store,
+      price: o.price,
+      originalPrice: o.originalPrice ?? null,
+      affiliateLink: o.affiliateLink,
+      shippingTime: o.shippingTime,
+      shippingCost: o.shippingCost,
+      availability: o.availability,
+      rating: o.rating ?? null,
+      reviewCount: o.reviewCount,
+      updatedAt: o.updatedAt instanceof Date ? o.updatedAt.toISOString() : String(o.updatedAt),
+    }));
+
+  const tone = await getAiTone();
+  const { analysisInput } = scrapedToAnalysisInput(scraped, existingOffers);
+  const analysis = await analyzeProduct(analysisInput, tone);
+
+  // 4. Update Product fields (only non-null scraped values).
+  const data: Record<string, unknown> = {
+    lastFetchedAt: new Date(),
+    advantages: JSON.stringify(analysis.advantages),
+    disadvantages: JSON.stringify(analysis.disadvantages),
+    useCases: JSON.stringify(analysis.useCases),
+    faqs: JSON.stringify(analysis.faqs),
+    metaTitle: analysis.metaTitle,
+    metaDescription: analysis.metaDescription,
+  };
+  if (scraped.name != null) data.name = scraped.name;
+  if (scraped.description != null) data.description = scraped.description;
+  if (scraped.brand != null) data.brand = scraped.brand;
+  if (scraped.category != null) data.category = scraped.category;
+  if (scraped.images.length > 0) data.images = JSON.stringify(scraped.images);
+  if (scraped.features.length > 0) data.features = JSON.stringify(scraped.features);
+  if (Object.keys(scraped.specs).length > 0) data.specs = JSON.stringify(scraped.specs);
+  // Refresh slug from AI analysis only if it changed and is unique.
+  if (analysis.slug && analysis.slug !== product.slug) {
+    data.slug = await ensureUniqueSlug(analysis.slug, product.id);
+  }
+
+  await db.product.update({ where: { id }, data });
+
+  // 5. Handle source store's offer: upsert by productId+store=sourceStore.
+  if (scraped.price != null) {
+    const existingOffer = product.offers.find(
+      (o) => o.store === scraped.sourceStore
+    );
+    const offerData = {
+      price: scraped.price,
+      originalPrice: scraped.originalPrice,
+      affiliateLink: scraped.sourceUrl,
+      shippingTime: scraped.shippingTime ?? "No disponible",
+      shippingCost: scraped.shippingCost ?? 0,
+      availability: scraped.availability,
+      rating: scraped.rating,
+      reviewCount: scraped.reviewCount ?? 0,
+      currency: scraped.currency ?? "PEN",
+      updatedAt: new Date(),
+    };
+    if (existingOffer) {
+      await db.offer.update({
+        where: { id: existingOffer.id },
+        data: offerData,
+      });
+    } else {
+      await db.offer.create({
+        data: {
+          productId: id,
+          store: scraped.sourceStore,
+          ...offerData,
+        },
+      });
+    }
+
+    // Record PriceHistory entry.
+    await db.priceHistory.create({
+      data: {
+        productId: id,
+        store: scraped.sourceStore,
+        price: scraped.price,
+        currency: scraped.currency ?? "PEN",
+        recordedAt: new Date(),
+      },
+    });
+  }
+
+  // 6. Refresh AiScore: delete old + create new.
+  if (product.aiScores.length > 0) {
+    await db.aiScore.deleteMany({
+      where: { productId: id },
+    });
+  }
+  await db.aiScore.create({
+    data: {
+      productId: id,
+      score: analysis.score,
+      classification: analysis.classification,
+      reasoning: analysis.reasoning,
+      recommendation: analysis.recommendation,
+      bestStore: analysis.bestStore,
+      summary: analysis.summary,
+    },
+  });
+
+  // 7. Return refreshed product with relations.
+  const refreshed = await fetchProductWithRelations(id);
+  if (!refreshed) {
+    throw new Error("Failed to load refreshed product");
+  }
+  return refreshed;
 }

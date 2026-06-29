@@ -97,18 +97,67 @@ export function useClick() {
   });
 }
 
-export function useScrape() {
+// V2: import a real product from an affiliate URL (scrapes + AI analysis)
+export function useImportProduct() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { query: string; store?: string }) =>
-      jfetch<{ product: Product }>("/api/scrape", {
+    mutationFn: (body: { url: string }) =>
+      jfetch<{ product: Product }>("/api/products/import", {
         method: "POST",
         body: JSON.stringify(body),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["home"] });
-      qc.invalidateQueries({ queryKey: ["search"] });
+      qc.invalidateQueries({ queryKey: ["categories"] });
+    },
+  });
+}
+
+// V2: refresh a single product's real data (re-scrape sourceUrl + re-analyze)
+export function useRefreshProduct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (productId: string) =>
+      jfetch<{ product: Product }>(`/api/products/${productId}/refresh`, {
+        method: "POST",
+      }),
+    onSuccess: (_data, productId) => {
+      qc.invalidateQueries({ queryKey: ["product", productId] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["home"] });
+    },
+  });
+}
+
+// V2: bulk refresh several products
+export function useBulkRefresh() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      jfetch<{ results: { id: string; success: boolean; error?: string }[] }>(
+        "/api/products/bulk-refresh",
+        { method: "POST", body: JSON.stringify({ ids }) }
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["home"] });
+    },
+  });
+}
+
+// V2: toggle featured flag
+export function useToggleFeature() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isFeatured }: { id: string; isFeatured: boolean }) =>
+      jfetch<{ product: Product }>(`/api/products/${id}/feature`, {
+        method: "PUT",
+        body: JSON.stringify({ isFeatured }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["home"] });
     },
   });
 }

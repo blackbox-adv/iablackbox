@@ -39,6 +39,11 @@ export interface AiScore {
   updatedAt: string;
 }
 
+export interface Faq {
+  q: string;
+  a: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -50,10 +55,32 @@ export interface Product {
   specs: Record<string, string>;
   isActive: boolean;
   isViral: boolean;
+  // V2 sourcing & SEO
+  sourceUrl?: string | null;
+  sourceStore?: string | null;
+  slug?: string | null;
+  isFeatured: boolean;
+  lastFetchedAt?: string | null;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  // V2 AI analysis (real data only)
+  advantages: string[];
+  disadvantages: string[];
+  useCases: string[];
+  faqs: Faq[];
   createdAt: string;
   updatedAt: string;
   offers?: Offer[];
   aiScore?: AiScore | null;
+}
+
+export interface PriceHistoryPoint {
+  id: string;
+  productId: string;
+  store: string;
+  price: number;
+  currency: string;
+  recordedAt: string;
 }
 
 export interface HomeSection {

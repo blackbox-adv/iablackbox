@@ -1,22 +1,18 @@
 "use client";
 
-import { useSearch, useScrape } from "@/hooks/use-blackbox";
+import { useSearch } from "@/hooks/use-blackbox";
 import { useAppStore } from "@/lib/store";
 import { ProductCard } from "@/components/blackbox/product-card";
 import { ProductGridSkeleton } from "@/components/blackbox/skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Search as SearchIcon, Download, AlertCircle, ArrowLeft } from "lucide-react";
+import { Sparkles, Search as SearchIcon, AlertCircle, ArrowLeft, PackageSearch } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { toast } from "sonner";
 
 export function SearchView({ query }: { query: string }) {
   const goSearch = useAppStore((s) => s.goSearch);
   const goHome = useAppStore((s) => s.goHome);
-  const goProduct = useAppStore((s) => s.goProduct);
   const { data, isLoading } = useSearch(query);
-  const scrape = useScrape();
-  const [localQ, setLocalQ] = useState(query);
 
   const products = data?.products ?? [];
   const intent = data?.intent;
@@ -27,16 +23,7 @@ export function SearchView({ query }: { query: string }) {
     if (localQ.trim()) goSearch(localQ.trim());
   };
 
-  const onScrape = async () => {
-    const t = toast.loading(`Buscando "${query}" en tiendas…`);
-    try {
-      const res = await scrape.mutateAsync({ query });
-      toast.success("Producto encontrado y agregado", { id: t });
-      goProduct(res.product.id);
-    } catch {
-      toast.error("No se pudo buscar el producto ahora", { id: t });
-    }
-  };
+  const [localQ, setLocalQ] = useState(query);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
@@ -96,16 +83,20 @@ export function SearchView({ query }: { query: string }) {
       ) : noResults ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/30 px-6 py-16 text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50 text-muted-foreground">
-            <AlertCircle className="h-7 w-7" />
+            <PackageSearch className="h-7 w-7" />
           </span>
           <h3 className="mt-4 text-lg font-semibold">Sin resultados para “{query}”</h3>
           <p className="mt-1 max-w-md text-sm text-muted-foreground">
-            Este producto aún no está en BLACKBOX. Podemos buscarlo ahora en las tiendas
-            afiliadas (scraping bajo demanda) y analizarlo con IA.
+            Este producto aún no está en BLACKBOX. La información de productos se
+            agrega únicamente desde el panel de administración importando enlaces
+            reales de tiendas afiliadas.
           </p>
-          <Button onClick={onScrape} disabled={scrape.isPending} className="mt-5 gap-2">
-            <Download className="h-4 w-4" />
-            {scrape.isPending ? "Buscando…" : "Buscar en tiendas ahora"}
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <AlertCircle className="h-3.5 w-3.5" />
+            BLACKBOX no inventa productos ni precios.
+          </p>
+          <Button variant="outline" onClick={goHome} className="mt-5">
+            Volver al inicio
           </Button>
         </div>
       ) : (

@@ -10,7 +10,7 @@ import {
   availabilityLabel,
   timeAgo,
 } from "@/lib/constants";
-import type { Offer, Store } from "@/lib/types";
+import type { Offer, Store, Product, Faq } from "@/lib/types";
 import { ProductImage } from "@/components/blackbox/product-image";
 import { ScoreRing } from "@/components/blackbox/score-ring";
 import {
@@ -24,6 +24,12 @@ import { PriceBars } from "@/components/blackbox/price-bars";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   ArrowLeft,
   Star,
   ExternalLink,
@@ -36,6 +42,10 @@ import {
   Crown,
   Loader2,
   Check,
+  ThumbsUp,
+  ThumbsDown,
+  Target,
+  HelpCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -185,6 +195,9 @@ export function ProductView({ productId }: { productId: string }) {
               </>
             )}
           </div>
+
+          {/* V2: AI analysis — advantages / disadvantages / use cases */}
+          <AnalysisSection product={product} />
         </div>
 
         {/* RIGHT: AI + offers */}
@@ -358,6 +371,30 @@ export function ProductView({ productId }: { productId: string }) {
           </div>
         </div>
       </div>
+
+      {/* V2: FAQs (full width) */}
+      <FaqSection product={product} />
+
+      {/* V2: source provenance */}
+      {product.sourceUrl && (
+        <div className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-card/30 px-4 py-3 text-xs text-muted-foreground">
+          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+          <span>
+            Información obtenida de{" "}
+            <a
+              href={product.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-foreground underline-offset-2 hover:underline"
+            >
+              {STORES[product.sourceStore as keyof typeof STORES]?.label ?? "tienda afiliada"}
+            </a>
+            {product.lastFetchedAt && (
+              <span className="ml-1">· actualizada {timeAgo(product.lastFetchedAt)}</span>
+            )}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -380,6 +417,105 @@ function RecRow({
         <p className={cn("text-xs font-semibold uppercase tracking-wide", color)}>{label}</p>
         <p className="mt-0.5 text-sm text-foreground/90">{text}</p>
       </div>
+    </div>
+  );
+}
+
+// V2: AI analysis section — advantages / disadvantages / use cases (real data only)
+function AnalysisSection({ product }: { product: Product }) {
+  const advantages = product.advantages ?? [];
+  const disadvantages = product.disadvantages ?? [];
+  const useCases = product.useCases ?? [];
+  const hasContent = advantages.length > 0 || disadvantages.length > 0 || useCases.length > 0;
+
+  if (!hasContent) return null;
+
+  return (
+    <div className="rounded-2xl border border-border bg-card/40 p-5">
+      <div className="mb-3 flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-primary" />
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Análisis IA del producto
+        </h2>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        {advantages.length > 0 && (
+          <AnalysisList icon={ThumbsUp} title="Ventajas" items={advantages} color="text-emerald-400" />
+        )}
+        {disadvantages.length > 0 && (
+          <AnalysisList icon={ThumbsDown} title="Desventajas" items={disadvantages} color="text-rose-400" />
+        )}
+      </div>
+
+      {useCases.length > 0 && (
+        <div className="mt-4">
+          <AnalysisList icon={Target} title="Casos de uso" items={useCases} color="text-lime-400" />
+        </div>
+      )}
+
+      <p className="mt-3 text-[11px] text-muted-foreground">
+        Análisis basado únicamente en datos reales obtenidos de la tienda. Los campos no
+        disponibles se omiten; BLACKBOX no inventa información.
+      </p>
+    </div>
+  );
+}
+
+function AnalysisList({
+  icon: Icon,
+  title,
+  items,
+  color,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  items: string[];
+  color: string;
+}) {
+  return (
+    <div>
+      <h3 className={cn("mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide", color)}>
+        <Icon className="h-3.5 w-3.5" />
+        {title}
+      </h3>
+      <ul className="space-y-1.5">
+        {items.map((item, i) => (
+          <li key={i} className="flex items-start gap-2 text-sm text-foreground/90">
+            <span className={cn("mt-1.5 h-1 w-1 shrink-0 rounded-full bg-current", color)} />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// V2: FAQs section (AI-generated, real-data-based)
+function FaqSection({ product }: { product: Product }) {
+  const faqs: Faq[] = product.faqs ?? [];
+  if (faqs.length === 0) return null;
+
+  return (
+    <div className="mt-6 rounded-2xl border border-border bg-card/40 p-5">
+      <div className="mb-3 flex items-center gap-2">
+        <HelpCircle className="h-4 w-4 text-primary" />
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Preguntas frecuentes (IA)
+        </h2>
+      </div>
+      <Accordion type="single" collapsible className="w-full">
+        {faqs.map((faq, i) => (
+          <AccordionItem key={i} value={`faq-${i}`}>
+            <AccordionTrigger className="text-left text-sm font-medium hover:no-underline">
+              {faq.q}
+            </AccordionTrigger>
+            <AccordionContent className="text-sm text-muted-foreground">
+              {faq.a}
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
     </div>
   );
 }

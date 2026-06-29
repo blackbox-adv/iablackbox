@@ -41,23 +41,30 @@ export async function GET(_req: NextRequest) {
     });
     const sections = sectionRows.map(mapSection);
 
-    // featured: products with discount offers, sorted by best discount % desc
+    // featured: prioritize isFeatured=true products first, then fall back to
+    // discount-based ranking. Limit 8.
     const allProducts = await db.product.findMany({
       where: { isActive: true },
       include: PRODUCT_INCLUDE,
+      orderBy: [{ isFeatured: "desc" }, { updatedAt: "desc" }],
     });
 
     const featured = allProducts
       .map(parseProduct)
-      .filter((p) => p.offers && p.offers.some((o) => o.originalPrice && o.originalPrice > o.price))
       .map((p) => {
         const best = (p.offers ?? []).reduce((max, o) => {
           const d = discountPct(o.price, o.originalPrice);
           return d > max ? d : max;
         }, 0);
-        return { p, best };
+        return { p, best, isFeatured: p.isFeatured };
       })
-      .sort((a, b) => b.best - a.best)
+      .sort((a, b) => {
+        // Featured first, then best discount desc.
+        if (a.isFeatured !== b.isFeatured) {
+          return a.isFeatured ? -1 : 1;
+        }
+        return b.best - a.best;
+      })
       .slice(0, 8)
       .map((x) => x.p);
 
