@@ -1,0 +1,25 @@
+🚀 Initializing Z-AI SDK...
+🔎 Searching images: "gaming mouse RGB ergonomic product photo"
+✅ Got 2 images
+{
+  "success": true,
+  "query": "gaming mouse RGB ergonomic product photo",
+  "count": 2,
+  "ranked": false,
+  "results": [
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/d6a6202c22b9.jpg",
+      "caption": "",
+      "source": "Amazon.de",
+      "original_width": "900px",
+      "original_height": "1000px"
+    },
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/625bd8be98ee.jpg",
+      "caption": "",
+      "source": "Alibaba.com",
+      "original_width": "790px",
+      "original_height": "1158px"
+    }
+  ]
+}

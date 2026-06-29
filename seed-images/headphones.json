@@ -1,0 +1,25 @@
+🚀 Initializing Z-AI SDK...
+🔎 Searching images: "over ear bluetooth headphones product photo"
+✅ Got 2 images
+{
+  "success": true,
+  "query": "over ear bluetooth headphones product photo",
+  "count": 2,
+  "ranked": false,
+  "results": [
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/323508e97731.webp",
+      "caption": "",
+      "source": "1MORE",
+      "original_width": "1200px",
+      "original_height": "1200px"
+    },
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/78457d929f42.jpg",
+      "caption": "",
+      "source": "Morpheus 360",
+      "original_width": "1946px",
+      "original_height": "1945px"
+    }
+  ]
+}

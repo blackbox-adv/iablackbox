@@ -1,0 +1,25 @@
+🚀 Initializing Z-AI SDK...
+🔎 Searching images: "mechanical gaming keyboard RGB backlit product"
+✅ Got 2 images
+{
+  "success": true,
+  "query": "mechanical gaming keyboard RGB backlit product",
+  "count": 2,
+  "ranked": false,
+  "results": [
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/2595fee760db.jpg",
+      "caption": "",
+      "source": "Eluktronics",
+      "original_width": "900px",
+      "original_height": "900px"
+    },
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/d19ffc1ac67a.jpg",
+      "caption": "",
+      "source": "AYOUB COMPUTERS",
+      "original_width": "1000px",
+      "original_height": "1000px"
+    }
+  ]
+}

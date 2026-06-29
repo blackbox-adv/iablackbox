@@ -1,0 +1,25 @@
+🚀 Initializing Z-AI SDK...
+🔎 Searching images: "smartwatch fitness tracker black product photo"
+✅ Got 2 images
+{
+  "success": true,
+  "query": "smartwatch fitness tracker black product photo",
+  "count": 2,
+  "ranked": false,
+  "results": [
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/4f38916bba31.jpg",
+      "caption": "",
+      "source": "Amazon.com.au",
+      "original_width": "1500px",
+      "original_height": "1371px"
+    },
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/7d4a07d1251f.jpg",
+      "caption": "",
+      "source": "Amazon.in",
+      "original_width": "1500px",
+      "original_height": "1500px"
+    }
+  ]
+}

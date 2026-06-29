@@ -1,0 +1,25 @@
+🚀 Initializing Z-AI SDK...
+🔎 Searching images: "mini portable fan handheld gadget product"
+✅ Got 2 images
+{
+  "success": true,
+  "query": "mini portable fan handheld gadget product",
+  "count": 2,
+  "ranked": false,
+  "results": [
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/4841d5759143.jpg",
+      "caption": "",
+      "source": "Nitecore Singapore",
+      "original_width": "1080px",
+      "original_height": "1080px"
+    },
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/fab1f9a73fab.jpg",
+      "caption": "",
+      "source": "Martview",
+      "original_width": "1000px",
+      "original_height": "1000px"
+    }
+  ]
+}

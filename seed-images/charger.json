@@ -1,0 +1,25 @@
+🚀 Initializing Z-AI SDK...
+🔎 Searching images: "USB C fast charger adapter GaN product photo"
+✅ Got 2 images
+{
+  "success": true,
+  "query": "USB C fast charger adapter GaN product photo",
+  "count": 2,
+  "ranked": false,
+  "results": [
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/2b2f68ef449a.jpg",
+      "caption": "",
+      "source": "Amazon.nl",
+      "original_width": "1000px",
+      "original_height": "796px"
+    },
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/1beaeb0822de.jpg",
+      "caption": "",
+      "source": "IA Tech",
+      "original_width": "1740px",
+      "original_height": "2004px"
+    }
+  ]
+}

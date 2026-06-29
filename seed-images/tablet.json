@@ -1,0 +1,25 @@
+🚀 Initializing Z-AI SDK...
+🔎 Searching images: "android tablet budget device product photo"
+✅ Got 2 images
+{
+  "success": true,
+  "query": "android tablet budget device product photo",
+  "count": 2,
+  "ranked": false,
+  "results": [
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/df6fb1d2b7b7.jpg",
+      "caption": "",
+      "source": "www.amazon.sa",
+      "original_width": "1600px",
+      "original_height": "1600px"
+    },
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/0bca98738f76.jpg",
+      "caption": "",
+      "source": "Android Central",
+      "original_width": "1440px",
+      "original_height": "810px"
+    }
+  ]
+}

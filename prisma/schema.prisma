@@ -1,0 +1,114 @@
+// BLACKBOX - Intelligent offer discovery & product comparison platform
+// Database schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  category    String
+  brand       String?
+  images      String   @default("[]") // JSON array of image URLs
+  features    String   @default("[]") // JSON array of feature strings
+  specs       String   @default("{}") // JSON object of key specs
+  isActive    Boolean  @default(true)
+  isViral     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  offers   Offer[]
+  aiScores AiScore[]
+  clicks   Click[]
+}
+
+model Offer {
+  id            String   @id @default(cuid())
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store         String   // amazon | temu | falabella
+  price         Float
+  originalPrice Float?
+  affiliateLink String
+  shippingTime  String   @default("No especificado")
+  shippingCost  Float    @default(0)
+  availability  String   @default("in_stock") // in_stock | low_stock | out_of_stock
+  rating        Float?   // 0-5
+  reviewCount   Int      @default(0)
+  updatedAt     DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([productId])
+  @@index([store])
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String?
+  preferences String   @default("{}") // JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  clicks Click[]
+}
+
+model AiScore {
+  id              String   @id @default(cuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  score           Int      // 0-100
+  classification  String   // excellent | good | regular | not_recommended
+  reasoning       String
+  recommendation  String?
+  bestStore       String?
+  summary         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([productId])
+}
+
+model Click {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  store     String?
+  timestamp DateTime @default(now())
+
+  @@index([productId])
+}
+
+model HomeSection {
+  id       String @id @default(cuid())
+  type     String // hero | offers | categories | ai_recommendations | comparator
+  title    String
+  subtitle String?
+  isActive Boolean @default(true)
+  order    Int
+  config   String  @default("{}") // JSON config
+}
+
+model AffiliateLink {
+  id        String  @id @default(cuid())
+  store     String  @unique
+  baseUrl   String
+  tagParam  String?
+  tagValue  String?
+  isActive  Boolean @default(true)
+}
+
+model AiSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}

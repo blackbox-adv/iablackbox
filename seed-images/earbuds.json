@@ -1,0 +1,25 @@
+🚀 Initializing Z-AI SDK...
+🔎 Searching images: "wireless bluetooth earbuds charging case product photo"
+✅ Got 2 images
+{
+  "success": true,
+  "query": "wireless bluetooth earbuds charging case product photo",
+  "count": 2,
+  "ranked": false,
+  "results": [
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/8359935c91d7.jpg",
+      "caption": "",
+      "source": "Amazon.in",
+      "original_width": "969px",
+      "original_height": "1600px"
+    },
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/6486b60af4a8.jpg",
+      "caption": "",
+      "source": "Gabba Goods",
+      "original_width": "1500px",
+      "original_height": "1500px"
+    }
+  ]
+}

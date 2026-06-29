@@ -1,0 +1,25 @@
+🚀 Initializing Z-AI SDK...
+🔎 Searching images: "electric foil shaver razor device on white background"
+✅ Got 2 images
+{
+  "success": true,
+  "query": "electric foil shaver razor device on white background",
+  "count": 2,
+  "ranked": false,
+  "results": [
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/7df744a197bf.jpg",
+      "caption": "",
+      "source": "Remington",
+      "original_width": "2000px",
+      "original_height": "2000px"
+    },
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/c0733319fd4b.jpg",
+      "caption": "",
+      "source": "Remington",
+      "original_width": "2000px",
+      "original_height": "2000px"
+    }
+  ]
+}

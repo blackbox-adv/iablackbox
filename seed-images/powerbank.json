@@ -1,0 +1,25 @@
+🚀 Initializing Z-AI SDK...
+🔎 Searching images: "portable power bank battery charger product photo"
+✅ Got 2 images
+{
+  "success": true,
+  "query": "portable power bank battery charger product photo",
+  "count": 2,
+  "ranked": false,
+  "results": [
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/78f1313a7e49.jpg",
+      "caption": "",
+      "source": "Amazon.com",
+      "original_width": "1200px",
+      "original_height": "1500px"
+    },
+    {
+      "original_url": "https://sfile.chatglm.cn/images-ppt/33168d6bf8b0.jpg",
+      "caption": "",
+      "source": "ghostek",
+      "original_width": "2000px",
+      "original_height": "2000px"
+    }
+  ]
+}

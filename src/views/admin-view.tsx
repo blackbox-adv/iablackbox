@@ -1,0 +1,276 @@
+"use client";
+
+import { useAdminAffiliates, useUpsertAffiliate, useAiSettings, useUpdateAiSettings } from "@/hooks/use-blackbox";
+import { STORES, STORE_LIST, AI_TONES } from "@/lib/constants";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { AdminProducts } from "./admin-products";
+import { AdminHomeEditor } from "./admin-home-editor";
+import { Package, LayoutGrid, Link2, Sparkles, Save, Loader2, ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+export function AdminView() {
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-8">
+      <div className="mb-6 flex items-center gap-3">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-black shadow-lg shadow-emerald-500/20">
+          <ShieldCheck className="h-6 w-6" />
+        </span>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            BLACKBOX <span className="text-emerald-400">Control Center</span>
+          </h1>
+          <p className="text-sm text-muted-foreground">Panel maestro sin código</p>
+        </div>
+      </div>
+
+      <Tabs defaultValue="products">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+          <TabsTrigger value="products" className="gap-1.5">
+            <Package className="h-4 w-4" />
+            <span className="hidden sm:inline">Productos</span>
+          </TabsTrigger>
+          <TabsTrigger value="home" className="gap-1.5">
+            <LayoutGrid className="h-4 w-4" />
+            <span className="hidden sm:inline">Home</span>
+          </TabsTrigger>
+          <TabsTrigger value="affiliates" className="gap-1.5">
+            <Link2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Afiliados</span>
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-1.5">
+            <Sparkles className="h-4 w-4" />
+            <span className="hidden sm:inline">IA</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="products" className="mt-6">
+          <AdminProducts />
+        </TabsContent>
+        <TabsContent value="home" className="mt-6">
+          <AdminHomeEditor />
+        </TabsContent>
+        <TabsContent value="affiliates" className="mt-6">
+          <AdminAffiliates />
+        </TabsContent>
+        <TabsContent value="ai" className="mt-6">
+          <AdminAiSettings />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function AdminAffiliates() {
+  const { data, isLoading } = useAdminAffiliates();
+  const upsert = useUpsertAffiliate();
+  const affiliates = data?.affiliates ?? [];
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Gestiona los parámetros de afiliado para cada tienda.
+      </p>
+      {STORE_LIST.map((storeKey) => {
+        const aff = affiliates.find((a) => a.store === storeKey);
+        const storeMeta = STORES[storeKey];
+        return (
+          <AffiliateCard
+            key={storeKey}
+            storeKey={storeKey}
+            label={storeMeta.label}
+            existing={aff}
+            onSave={async (baseUrl, tagParam, tagValue) => {
+              const t = toast.loading("Guardando…");
+              try {
+                await upsert.mutateAsync({
+                  id: aff?.id,
+                  store: storeKey,
+                  baseUrl,
+                  tagParam,
+                  tagValue,
+                });
+                toast.success("Afiliado guardado", { id: t });
+              } catch {
+                toast.error("Error al guardar", { id: t });
+              }
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function AffiliateCard({
+  storeKey,
+  label,
+  existing,
+  onSave,
+}: {
+  storeKey: string;
+  label: string;
+  existing?: { id: string; baseUrl: string; tagParam: string | null; tagValue: string | null; isActive: boolean };
+  onSave: (baseUrl: string, tagParam: string, tagValue: string) => void;
+}) {
+  const [baseUrl, setBaseUrl] = useState(existing?.baseUrl ?? "");
+  const [tagParam, setTagParam] = useState(existing?.tagParam ?? "");
+  const [tagValue, setTagValue] = useState(existing?.tagValue ?? "");
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <span className={STORES[storeKey as keyof typeof STORES]?.color ?? ""}>{label}</span>
+        </CardTitle>
+        <CardDescription>Dominio y tag de afiliado</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-1.5 sm:col-span-1">
+            <Label className="text-xs">Base URL</Label>
+            <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://…" className="text-xs" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Parámetro</Label>
+            <Input value={tagParam} onChange={(e) => setTagParam(e.target.value)} placeholder="tag" className="text-xs" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Valor del tag</Label>
+            <Input value={tagValue} onChange={(e) => setTagValue(e.target.value)} placeholder="blackbox-21" className="text-xs" />
+          </div>
+        </div>
+        <Button
+          size="sm"
+          onClick={() => onSave(baseUrl, tagParam, tagValue)}
+          disabled={upsertDisabled(baseUrl) || upsert.isPending}
+          className="gap-1.5"
+        >
+          <Save className="h-3.5 w-3.5" />
+          Guardar
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
+  function upsertDisabled(b: string) {
+    return !b.trim();
+  }
+}
+
+function AdminAiSettings() {
+  const { data, isLoading } = useAiSettings();
+  const update = useUpdateAiSettings();
+  const settings = data?.settings ?? {};
+  const [tone, setTone] = useState(settings.ai_tone ?? "simple");
+  const [enabled, setEnabled] = useState(settings.ai_enabled === "true");
+  const [freshness, setFreshness] = useState(settings.scrape_freshness_hours ?? "24");
+
+  // sync once loaded
+  const [synced, setSynced] = useState(false);
+  if (!synced && data) {
+    setTone(settings.ai_tone ?? "simple");
+    setEnabled(settings.ai_enabled === "true");
+    setFreshness(settings.scrape_freshness_hours ?? "24");
+    setSynced(true);
+  }
+
+  const save = async () => {
+    const t = toast.loading("Guardando…");
+    try {
+      await update.mutateAsync({
+        ai_tone: tone,
+        ai_enabled: String(enabled),
+        scrape_freshness_hours: freshness,
+      });
+      toast.success("Configuración guardada", { id: t });
+    } catch {
+      toast.error("Error al guardar", { id: t });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="h-4 w-4 text-primary" />
+            Estilo de IA
+          </CardTitle>
+          <CardDescription>Cómo la IA te habla al recomendar productos</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            {AI_TONES.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTone(t.key)}
+                className={`flex flex-col items-start gap-0.5 rounded-xl border p-3 text-left transition-all ${
+                  tone === t.key
+                    ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                    : "border-border bg-card/40 hover:border-foreground/20"
+                }`}
+              >
+                <span className="text-sm font-semibold">{t.label}</span>
+                <span className="text-xs text-muted-foreground">{t.desc}</span>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Motor de IA</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">IA activada</p>
+              <p className="text-xs text-muted-foreground">Genera scores y recomendaciones</p>
+            </div>
+            <Switch checked={enabled} onCheckedChange={setEnabled} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Freshness de scraping (horas)</Label>
+            <Input
+              type="number"
+              value={freshness}
+              onChange={(e) => setFreshness(e.target.value)}
+              className="max-w-[120px]"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Si un producto fue actualizado hace menos de este tiempo, no se vuelve a scrapear.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button onClick={save} disabled={update.isPending} className="gap-1.5">
+        {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+        Guardar configuración
+      </Button>
+    </div>
+  );
+}
