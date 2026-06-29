@@ -44,6 +44,7 @@ interface CreateProductBody {
   features?: string[];
   specs?: Record<string, string>;
   isViral?: boolean;
+  sourceUrl?: string | null;
 }
 
 export async function POST(req: NextRequest) {
@@ -60,6 +61,16 @@ export async function POST(req: NextRequest) {
     const features = body.features ?? [];
     const specs = body.specs ?? {};
 
+    // Detect store from sourceUrl if provided
+    let sourceStore: string | null = null;
+    if (body.sourceUrl) {
+      const u = body.sourceUrl.toLowerCase();
+      if (u.includes("amazon.") || u.includes("amzn.")) sourceStore = "amazon";
+      else if (u.includes("temu.com") || u.includes("temu.to")) sourceStore = "temu";
+      else if (u.includes("falabella.com")) sourceStore = "falabella";
+      else sourceStore = "other";
+    }
+
     const created = await db.product.create({
       data: {
         name: body.name,
@@ -71,6 +82,8 @@ export async function POST(req: NextRequest) {
         specs: JSON.stringify(specs),
         isViral: body.isViral ?? false,
         isActive: true,
+        sourceUrl: body.sourceUrl ?? null,
+        sourceStore,
       },
       include: {
         offers: { orderBy: { price: "asc" } },

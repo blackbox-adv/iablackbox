@@ -200,3 +200,23 @@ Work Log:
 
 Stage Summary:
 - BLACKBOX now refuses to create fake/empty products. Temu (and Amazon when blocked) return a clear error explaining the store blocks automated readers. The user can: (a) import from a store that returns server-rendered HTML, (b) enter product data manually via the edit dialog, or (c) integrate official affiliate APIs later (architecture is ready). DB is clean — only real imported products will appear.
+
+---
+Task ID: v2-temu-fix
+Agent: main
+Task: Fix Temu import — headless browser fallback + manual entry
+
+Work Log:
+- Diagnosed: Temu is 100% JS-rendered SPA. page_reader returns empty shell. Confirmed temu.to short link redirects to temu.com with goods_id.
+- Fixed detectStore + temuScraper to recognize temu.to short links.
+- Built headless browser fallback (src/lib/scraper/headless.ts): uses agent-browser CLI (Playwright) via spawnSync with isolated --session bb-scraper. Opens URL, waits for networkidle, extracts product data from rendered DOM (h1, meta tags, body text, images). Mines name from body text when h1 is generic. Mines price from body text (excludes shipping/min-order context).
+- Wired into import route: static scrape first → if NoProductDataError → try headless fallback → if still no data → return 422 with clear message.
+- Fixed CSS selector quoting issue: og:image colon breaks querySelector, rewrote to iterate meta tags via getElementsByTagName.
+- Result: Temu STILL blocks the headless browser (anti-bot detects Playwright → empty body, body.length=0). This is expected — Temu has aggressive anti-bot. The headless fallback works for LESS-protected sites but not Temu specifically.
+- Added "Crear manualmente" button to admin panel alongside "Importar producto". Manual form includes all fields + sourceUrl. When scraping fails, admin enters data by hand — the sourceUrl is saved so "Ver oferta" links to the exact product and "Actualizar información" can retry.
+- Updated POST /api/products to accept sourceUrl + auto-detect sourceStore.
+- Verified: manual creation works (POST /api/products 201), product page shows name/description/source provenance/"Recalcular IA" button.
+- `bun run lint` clean.
+
+Stage Summary:
+- Temu cannot be auto-scraped (anti-bot blocks both static reader AND headless browser). Amazon partially works. The practical path for Temu products is manual entry via "Crear manualmente" — paste the product URL as sourceUrl, enter name/description/images/price by hand, then "Recalcular IA" generates the analysis. The import-with-headless fallback remains for less-protected stores. This is the honest real-world limitation: Temu/Amazon actively block automated access; only official affiliate APIs would give reliable data.

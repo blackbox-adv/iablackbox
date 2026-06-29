@@ -57,6 +57,7 @@ export function AdminProducts() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const bulkRefresh = useBulkRefresh();
 
@@ -122,6 +123,14 @@ export function AdminProducts() {
               Actualizar {selected.size}
             </Button>
           )}
+          <Button
+            variant="outline"
+            onClick={() => setManualOpen(true)}
+            className="gap-1.5"
+          >
+            <Plus className="h-4 w-4" />
+            Crear manualmente
+          </Button>
           <Dialog open={importOpen} onOpenChange={setImportOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2 shadow-lg shadow-primary/20">
@@ -192,6 +201,22 @@ export function AdminProducts() {
               onClose={() => setEditOpen(false)}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual create dialog */}
+      <Dialog open={manualOpen} onOpenChange={setManualOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5 text-primary" />
+              Crear producto manualmente
+            </DialogTitle>
+          </DialogHeader>
+          <ManualProductForm
+            categories={catData?.categories ?? []}
+            onClose={() => setManualOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>
@@ -506,6 +531,124 @@ function EditProductForm({
 function bestOffer(p: Product) {
   if (!p.offers?.length) return null;
   return [...p.offers].sort((a, b) => a.price - b.price)[0];
+}
+
+// ---------- Manual product form ----------
+function ManualProductForm({
+  categories,
+  onClose,
+}: {
+  categories: string[];
+  onClose: () => void;
+}) {
+  const create = useCreateProduct();
+  const goProduct = useAppStore((s) => s.goProduct);
+
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState(categories[0] ?? "Tecnología");
+  const [brand, setBrand] = useState("");
+  const [images, setImages] = useState("");
+  const [features, setFeatures] = useState("");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [isViral, setIsViral] = useState(false);
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !description.trim()) return;
+    const t = toast.loading("Creando producto…");
+    try {
+      const payload = {
+        name: name.trim(),
+        description: description.trim(),
+        category,
+        brand: brand.trim() || undefined,
+        images: images.split("\n").map((s) => s.trim()).filter(Boolean),
+        features: features.split("\n").map((s) => s.trim()).filter(Boolean),
+        isViral,
+        sourceUrl: sourceUrl.trim() || undefined,
+      };
+      const res = await create.mutateAsync(payload as never);
+      toast.success("Producto creado", { id: t });
+      onClose();
+      goProduct(res.product.id);
+    } catch (err) {
+      toast.error("Error: " + (err as Error).message, { id: t });
+    }
+  };
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-muted-foreground">
+        <p className="font-medium text-foreground">Ingreso manual</p>
+        <p className="mt-1">
+          Usa este formulario cuando la importación automática no funcione (la tienda
+          bloquea lectores automáticos). Ingresa los datos que veas en la página del
+          producto. La IA los analizará después con "Recalcular IA".
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="m-name">Nombre *</Label>
+        <Input id="m-name" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="m-cat">Categoría</Label>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger id="m-cat"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {[...new Set([...categories, "Tecnología", "Audio", "Gaming", "Gadgets virales", "Accesorios móviles"])].map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="m-brand">Marca</Label>
+          <Input id="m-brand" value={brand} onChange={(e) => setBrand(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="m-desc">Descripción *</Label>
+        <Textarea id="m-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} required />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="m-imgs">Imágenes (una URL por línea)</Label>
+        <Textarea id="m-imgs" value={images} onChange={(e) => setImages(e.target.value)} rows={2} placeholder="https://…" />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="m-feat">Características (una por línea)</Label>
+        <Textarea id="m-feat" value={features} onChange={(e) => setFeatures(e.target.value)} rows={3} />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="m-src">URL de origen (enlace de afiliado del producto)</Label>
+        <Input id="m-src" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://www.temu.com/… o https://www.amazon.com/dp/…" type="url" />
+        <p className="text-[11px] text-muted-foreground">
+          Pega aquí el enlace exacto del producto. Así el botón "Ver oferta" llevará
+          directo al producto, y "Actualizar información" intentará re-obtener los datos.
+        </p>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Switch id="m-viral" checked={isViral} onCheckedChange={setIsViral} />
+        <Label htmlFor="m-viral">Producto viral</Label>
+      </div>
+
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+        <Button type="submit" disabled={create.isPending} className="gap-1.5">
+          {create.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+          Crear producto
+        </Button>
+      </DialogFooter>
+    </form>
+  );
 }
 
 // keep import to avoid tree-shake warnings if STORE_LIST used elsewhere later

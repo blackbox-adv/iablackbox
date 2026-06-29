@@ -9,6 +9,7 @@ import {
   ensureUniqueSlug,
 } from "@/lib/api-helpers";
 import { scrapeUrl, assertHasProductData, NoProductDataError } from "@/lib/scraper";
+import { headlessScrape, isHeadlessAvailable } from "@/lib/scraper/headless";
 import { scrapedToAnalysisInput, analyzeProduct } from "@/lib/ai-analysis";
 
 interface ImportBody {
@@ -26,29 +27,59 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Scrape real data.
+    // 2. Scrape real data — first try the fast static reader.
     let scraped;
+    let usedHeadless = false;
     try {
       scraped = await scrapeUrl(url);
     } catch (err) {
-      console.error("POST /api/products/import scrape failed:", err);
-      const msg = err instanceof Error ? err.message : "Scrape failed";
-      return NextResponse.json(
-        { error: `Failed to scrape URL: ${msg}` },
-        { status: 500 }
-      );
+      console.error("POST /api/products/import static scrape failed:", err);
+      scraped = null;
     }
 
-    // 2b. Guard: refuse to create empty products. If the store returned a
-    // generic shell / 404 / JS-only page with no real product data, tell the
-    // admin clearly instead of saving a fake product.
-    try {
-      assertHasProductData(scraped);
-    } catch (err) {
-      if (err instanceof NoProductDataError) {
-        return NextResponse.json({ error: err.message }, { status: 422 });
+    // 2a. If static scrape found no product data, fall back to a headless
+    // browser (renders JavaScript, like Google does). This handles Temu and
+    // other JS-only SPAs.
+    if (scraped) {
+      try {
+        assertHasProductData(scraped);
+      } catch (err) {
+        if (err instanceof NoProductDataError) {
+          // Static scrape returned an empty shell — try headless.
+          if (isHeadlessAvailable()) {
+            try {
+              const headlessData = await headlessScrape(url);
+              try {
+                assertHasProductData(headlessData);
+                scraped = headlessData;
+                usedHeadless = true;
+              } catch {
+                // Headless also found nothing — fall through to the error below.
+              }
+            } catch (herr) {
+              console.error("POST /api/products/import headless scrape failed:", herr);
+            }
+          }
+          // Re-check: if still no data, return the clear error.
+          try {
+            assertHasProductData(scraped);
+          } catch (err2) {
+            if (err2 instanceof NoProductDataError) {
+              return NextResponse.json({ error: err2.message }, { status: 422 });
+            }
+            throw err2;
+          }
+        } else {
+          throw err;
+        }
       }
-      throw err;
+    }
+
+    if (!scraped) {
+      return NextResponse.json(
+        { error: "No se pudo obtener la página del producto." },
+        { status: 500 }
+      );
     }
 
     // 3. AI tone setting.
