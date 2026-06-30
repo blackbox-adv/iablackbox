@@ -178,6 +178,11 @@ function AdminAiSettings() {
   const [tone, setTone] = useState(settings.ai_tone ?? "simple");
   const [enabled, setEnabled] = useState(settings.ai_enabled === "true");
   const [freshness, setFreshness] = useState(settings.scrape_freshness_hours ?? "24");
+  // AI provider config
+  const [provider, setProvider] = useState(settings.ai_provider ?? "z-ai");
+  const [apiKey, setApiKey] = useState(settings.ai_api_key ?? "");
+  const [model, setModel] = useState(settings.ai_model ?? "gemini-2.0-flash");
+  const [showKey, setShowKey] = useState(false);
 
   // sync once loaded
   const [synced, setSynced] = useState(false);
@@ -185,6 +190,9 @@ function AdminAiSettings() {
     setTone(settings.ai_tone ?? "simple");
     setEnabled(settings.ai_enabled === "true");
     setFreshness(settings.scrape_freshness_hours ?? "24");
+    setProvider(settings.ai_provider ?? "z-ai");
+    setApiKey(settings.ai_api_key ?? "");
+    setModel(settings.ai_model ?? "gemini-2.0-flash");
     setSynced(true);
   }
 
@@ -195,8 +203,11 @@ function AdminAiSettings() {
         ai_tone: tone,
         ai_enabled: String(enabled),
         scrape_freshness_hours: freshness,
+        ai_provider: provider,
+        ai_api_key: apiKey,
+        ai_model: model,
       });
-      toast.success("Configuración guardada", { id: t });
+      toast.success("Configuración de IA guardada", { id: t });
     } catch {
       toast.error("Error al guardar", { id: t });
     }
@@ -212,6 +223,101 @@ function AdminAiSettings() {
 
   return (
     <div className="space-y-4">
+      {/* Provider config — NEW */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="h-4 w-4 text-primary" />
+            Proveedor de IA
+          </CardTitle>
+          <CardDescription>
+            Elige qué IA usa BLACKBOX. Puedes usar la IA incluida o tu propia API key de Gemini.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Provider selector */}
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              onClick={() => setProvider("z-ai")}
+              className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-all ${
+                provider === "z-ai"
+                  ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                  : "border-border bg-card/40 hover:border-foreground/20"
+              }`}
+            >
+              <span className="text-sm font-semibold">IA incluida (z-ai)</span>
+              <span className="text-xs text-muted-foreground">Sin configuración. Lista para usar.</span>
+            </button>
+            <button
+              onClick={() => setProvider("gemini")}
+              className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-all ${
+                provider === "gemini"
+                  ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                  : "border-border bg-card/40 hover:border-foreground/20"
+              }`}
+            >
+              <span className="text-sm font-semibold">Google Gemini (tu API key)</span>
+              <span className="text-xs text-muted-foreground">Usa tu propia cuenta y cuota de Gemini.</span>
+            </button>
+          </div>
+
+          {/* Gemini-specific fields */}
+          {provider === "gemini" && (
+            <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">API key de Gemini *</Label>
+                <div className="relative">
+                  <Input
+                    type={showKey ? "text" : "password"}
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="AIzaSy..."
+                    className="pr-16 font-mono text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowKey(!showKey)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground hover:text-foreground"
+                  >
+                    {showKey ? "Ocultar" : "Ver"}
+                  </button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Consíguela gratis en{" "}
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline"
+                  >
+                    Google AI Studio
+                  </a>
+                  . Se guarda solo en tu base de datos.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Modelo</Label>
+                <Input
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder="gemini-2.0-flash"
+                  className="font-mono text-xs"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Modelos recomendados: <code>gemini-2.0-flash</code> (rápido),
+                  <code> gemini-2.5-flash</code>, <code>gemini-1.5-flash</code>.
+                </p>
+              </div>
+            </div>
+          )}
+          {provider === "z-ai" && (
+            <p className="rounded-lg bg-emerald-500/5 p-3 text-xs text-muted-foreground">
+              ✓ Usando la IA incluida. No necesitas configurar nada. Cambia a Gemini si quieres usar tu propia cuenta.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">

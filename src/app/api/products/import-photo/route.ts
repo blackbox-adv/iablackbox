@@ -11,13 +11,7 @@
 // can't read, never to invent values.
 
 import { NextRequest, NextResponse } from "next/server";
-import ZAI from "z-ai-web-dev-sdk";
-
-let zaiInstance: Awaited<ReturnType<typeof ZAI.create>> | null = null;
-async function getZai() {
-  if (!zaiInstance) zaiInstance = await ZAI.create();
-  return zaiInstance;
-}
+import { visionComplete } from "@/lib/ai-client";
 
 interface PhotoImportBody {
   image: string; // base64 data URL: data:image/jpeg;base64,....
@@ -59,8 +53,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const zai = await getZai();
-
     const systemPrompt = `Eres un asistente experto en extraer datos de productos desde capturas de pantalla de tiendas online (Temu, Amazon, Falabella, etc).
 
 REGLA CRITICA - INTEGRIDAD DE DATOS:
@@ -89,20 +81,15 @@ Responde con este JSON exacto:
 
 Recuerda: SOLO lo que ves. Si no lo ves, es 'No disponible'.`;
 
-    const completion = await zai.chat.completions.createVision({
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: systemPrompt + "\n\n" + userPrompt },
-            { type: "image_url", image_url: { url: body.image } },
-          ],
-        },
-      ],
-      thinking: { type: "disabled" },
-    });
-
-    const raw = completion.choices[0]?.message?.content ?? "";
+    const raw = await visionComplete([
+      {
+        role: "user",
+        content: [
+          { type: "text", text: systemPrompt + "\n\n" + userPrompt },
+          { type: "image_url", image_url: { url: body.image } },
+        ],
+      },
+    ]);
     const extracted = parseExtracted(raw);
 
     // If we couldn't extract even a name, tell the admin

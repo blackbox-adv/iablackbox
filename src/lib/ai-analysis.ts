@@ -3,16 +3,10 @@
 // from the input, the AI must write "No disponible" (or omit the field), never
 // fabricate a price, rating, spec, or feature.
 
-import ZAI from "z-ai-web-dev-sdk";
+import { chatComplete, getAiConfig } from "./ai-client";
 import type { AiTone, Offer } from "./types";
 import { classificationFromScore } from "./constants";
 import type { ScrapedProduct } from "./scraper/types";
-
-let zaiInstance: Awaited<ReturnType<typeof ZAI.create>> | null = null;
-async function getZai() {
-  if (!zaiInstance) zaiInstance = await ZAI.create();
-  return zaiInstance;
-}
 
 const TONE_PROMPTS: Record<AiTone, string> = {
   simple:
@@ -103,7 +97,7 @@ export async function analyzeProduct(
   input: ProductAnalysisInput,
   tone: AiTone = "simple"
 ): Promise<ProductAnalysis> {
-  const zai = await getZai();
+  const config = await getAiConfig();
   const context = buildContext(input);
 
   const systemPrompt = `${TONE_PROMPTS[tone]}
@@ -140,14 +134,13 @@ Genera el análisis completo. Responde con este JSON exacto:
 Recuerda: NUNCA inventes datos. Si no hay info, usa "No disponible".`;
 
   try {
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: "assistant", content: systemPrompt },
+    const raw = await chatComplete(
+      [
+        { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      thinking: { type: "disabled" },
-    });
-    const raw = completion.choices[0]?.message?.content ?? "";
+      config
+    );
     const json = extractJson(raw);
     const score = clampScore(Number(json.score) || fallbackScore(input));
     return {

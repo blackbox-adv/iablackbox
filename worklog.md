@@ -256,3 +256,20 @@ Work Log:
 
 Stage Summary:
 - The photo import solves the Temu/Amazon anti-bot problem elegantly: admin takes a screenshot of the product page on their phone/computer, uploads it, the VLM reads everything (name, price, brand, description, features), admin pastes the affiliate link, reviews, and saves. No scraping needed, no data invented, affiliate link always preserved. This is the most reliable path for Temu products.
+
+---
+Task ID: v2-gemini
+Agent: main
+Task: Add AI provider switching — use built-in z-ai OR custom Gemini API key
+
+Work Log:
+- Created src/lib/ai-client.ts: unified AI client with chatComplete() and visionComplete() that route to z-ai (default) or Gemini REST API based on AiSetting table. getAiConfig() reads provider/apiKey/model/tone from DB. Gemini implementation: REST calls to generativelanguage.googleapis.com, converts OpenAI-style messages to Gemini "contents" format, supports inline image data for vision. testAiConfig() helper for connection testing.
+- Refactored ai-analysis.ts: replaced direct ZAI usage with chatComplete() + getAiConfig(). analyzeProduct() now routes through the unified client.
+- Refactored ai.ts (V1): replaced all 3 functions (generateAiScore, generateRecommendation, analyzeSearchIntent) to use chatComplete() + getAiConfig().
+- Refactored import-photo/route.ts: replaced zai.createVision with visionComplete() from the unified client.
+- Redesigned AdminAiSettings in Control Center: new "Proveedor de IA" card with 2 options (IA incluida z-ai / Google Gemini con tu API key). Gemini shows API key field (password with show/hide), model field (default gemini-2.0-flash), and link to Google AI Studio. Save persists ai_provider, ai_api_key, ai_model to DB.
+- Verified: switching to Gemini + filling API key + saving → DB has ai_provider=gemini, ai_api_key=AIzaSy..., ai_model=gemini-2.0-flash (PUT 200). Switching back to z-ai → ai_provider=z-ai. Recalcular IA with z-ai → POST /api/ai/score 200 in 2.8s (refactored client works).
+- `bun run lint` clean.
+
+Stage Summary:
+- The Control Center now lets you choose your AI provider. Default is the built-in z-ai (no config needed). Switch to "Google Gemini" and paste your API key from Google AI Studio (https://aistudio.google.com/app/apikey) — BLACKBOX will use Gemini for all AI: product analysis, scoring, recommendations, search intent, AND photo extraction (Gemini supports vision). The architecture is provider-agnostic: adding OpenAI/Claude later is just implementing the same chatComplete()/visionComplete() interface. Currently set back to z-ai so the AI keeps working; user can switch to Gemini anytime by pasting their real key.

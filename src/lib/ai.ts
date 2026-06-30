@@ -1,14 +1,7 @@
-// BLACKBOX AI engine - backend only. Uses z-ai-web-dev-sdk.
-import ZAI from "z-ai-web-dev-sdk";
+// BLACKBOX AI engine - backend only. Uses the unified ai-client (z-ai or Gemini).
+import { chatComplete, getAiConfig } from "./ai-client";
 import type { Offer, AiTone } from "./types";
 import { classificationFromScore } from "./constants";
-
-let zaiInstance: Awaited<ReturnType<typeof ZAI.create>> | null = null;
-
-async function getZai() {
-  if (!zaiInstance) zaiInstance = await ZAI.create();
-  return zaiInstance;
-}
 
 const TONE_PROMPTS: Record<AiTone, string> = {
   simple:
@@ -44,7 +37,7 @@ export async function generateAiScore(
   input: AiScoreInput,
   tone: AiTone = "simple"
 ): Promise<AiScoreResult> {
-  const zai = await getZai();
+  const config = await getAiConfig();
   const offersText = input.offers
     .map(
       (o) =>
@@ -83,15 +76,13 @@ Criterios del score:
 - 0-49: no recomendable`;
 
   try {
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: "assistant", content: systemPrompt },
+    const raw = await chatComplete(
+      [
+        { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      thinking: { type: "disabled" },
-    });
-
-    const raw = completion.choices[0]?.message?.content ?? "";
+      config
+    );
     const json = extractJson(raw);
     const score = Math.max(0, Math.min(100, Number(json.score) || 0));
     return {
@@ -122,7 +113,7 @@ export async function generateRecommendation(
   cheapAlternative: string;
   premiumAlternative: string;
 }> {
-  const zai = await getZai();
+  const config = await getAiConfig();
   const sorted = [...input.offers].sort((a, b) => a.price - b.price);
   const cheapest = sorted[0];
   const premium = sorted[sorted.length - 1];
@@ -155,14 +146,13 @@ Responde con este JSON:
 }`;
 
   try {
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: "assistant", content: systemPrompt },
+    const raw = await chatComplete(
+      [
+        { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      thinking: { type: "disabled" },
-    });
-    const raw = completion.choices[0]?.message?.content ?? "";
+      config
+    );
     const json = extractJson(raw);
     return {
       summary: String(json.summary || ""),
@@ -189,7 +179,7 @@ export async function analyzeSearchIntent(query: string): Promise<{
   suggestedCategory: string | null;
   keywords: string[];
 }> {
-  const zai = await getZai();
+  const config = await getAiConfig();
   const systemPrompt = `Analizas intenciones de búsqueda de productos. Respondes SIEMPRE con JSON válido.`;
   const userPrompt = `Consulta del usuario: "${query}"
 
@@ -203,14 +193,13 @@ Responde con JSON:
 }`;
 
   try {
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: "assistant", content: systemPrompt },
+    const raw = await chatComplete(
+      [
+        { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      thinking: { type: "disabled" },
-    });
-    const raw = completion.choices[0]?.message?.content ?? "";
+      config
+    );
     const json = extractJson(raw);
     return {
       intent: String(json.intent || query),
