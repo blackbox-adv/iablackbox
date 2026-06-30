@@ -114,6 +114,35 @@ export function useImportProduct() {
   });
 }
 
+// V2: extract product data from an uploaded screenshot using VLM (vision AI)
+export interface PhotoExtracted {
+  name: string | null;
+  description: string | null;
+  brand: string | null;
+  price: number | null;
+  originalPrice: number | null;
+  currency: string | null;
+  features: string[];
+  specs: Record<string, string>;
+  category: string | null;
+  rating: number | null;
+  reviewCount: number | null;
+  availability: string | null;
+}
+
+export function usePhotoExtract() {
+  return useMutation({
+    mutationFn: (body: { image: string; affiliateUrl?: string }) =>
+      jfetch<{ extracted: PhotoExtracted; affiliateUrl: string | null }>(
+        "/api/products/import-photo",
+        {
+          method: "POST",
+          body: JSON.stringify(body),
+        }
+      ),
+  });
+}
+
 // V2: refresh a single product's real data (re-scrape sourceUrl + re-analyze)
 export function useRefreshProduct() {
   const qc = useQueryClient();

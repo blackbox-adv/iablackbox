@@ -240,3 +240,19 @@ Work Log:
 
 Stage Summary:
 - Affiliate links are now NEVER lost. When Temu/Amazon blocks scraping, the import dialog switches to a manual fallback that saves the link + asks for minimum display data (name + price). When the headless browser succeeds (as it did for Temu this time), the product is created automatically with the affiliate link. Either way, "Ver oferta" links to the exact product URL and earns the affiliate commission.
+
+---
+Task ID: v2-photo
+Agent: main
+Task: Photo import — upload product screenshot, VLM extracts all data automatically
+
+Work Log:
+- Built POST /api/products/import-photo: receives base64 image + optional affiliateUrl, uses z-ai createVision (VLM) to extract product data. Strict no-invention rule in prompt: "SOLO lo que ves, si no lo ves es 'No disponible'". Returns ExtractedProduct (name, price, originalPrice, brand, description, features[], specs{}, category, rating, reviewCount, availability).
+- Added usePhotoExtract hook + PhotoExtracted type to use-blackbox.ts.
+- Redesigned ImportDialog with 2 tabs: "Pegar enlace" (URL import with fallback) and "Subir foto" (VLM photo import). Tab switcher UI with Camera/Link2 icons.
+- PhotoImportForm has 2 steps: (1) upload image + paste affiliate link, (2) review extracted data (pre-filled by IA, fully editable) + save. The affiliate link is ALWAYS preserved.
+- Verified end-to-end: created a fake product HTML page (name, price S/89.90, brand SoundPro, 5 features, rating 4.5, 3200 reviews), screenshotted it, uploaded via the dialog. VLM extracted ALL fields perfectly in 7.3s. POST /api/products 201 — product created with Temu affiliate link.
+- `bun run lint` clean.
+
+Stage Summary:
+- The photo import solves the Temu/Amazon anti-bot problem elegantly: admin takes a screenshot of the product page on their phone/computer, uploads it, the VLM reads everything (name, price, brand, description, features), admin pastes the affiliate link, reviews, and saves. No scraping needed, no data invented, affiliate link always preserved. This is the most reliable path for Temu products.

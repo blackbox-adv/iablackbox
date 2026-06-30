@@ -6,6 +6,7 @@ import {
   useUpdateProduct,
   useDeleteProduct,
   useImportProduct,
+  usePhotoExtract,
   useRefreshProduct,
   useBulkRefresh,
   useToggleFeature,
@@ -46,6 +47,7 @@ import {
   Sparkles,
   Globe,
   Check,
+  Camera,
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
@@ -224,8 +226,50 @@ export function AdminProducts() {
   );
 }
 
-// ---------- Import dialog (with manual fallback to preserve affiliate link) ----------
+// ---------- Import dialog (URL / Photo / fallback) ----------
 function ImportDialog({ onClose }: { onClose: () => void }) {
+  const [mode, setMode] = useState<"url" | "photo">("url");
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Link2 className="h-5 w-5 text-primary" />
+          Importar producto
+        </DialogTitle>
+      </DialogHeader>
+      {/* Mode switcher */}
+      <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-muted/30 p-1">
+        <button
+          type="button"
+          onClick={() => setMode("url")}
+          className={cn(
+            "flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            mode === "url" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Link2 className="h-4 w-4" />
+          Pegar enlace
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("photo")}
+          className={cn(
+            "flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            mode === "photo" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Camera className="h-4 w-4" />
+          Subir foto
+        </button>
+      </div>
+      {mode === "url" ? <UrlImportForm onClose={onClose} /> : <PhotoImportForm onClose={onClose} />}
+    </>
+  );
+}
+
+// ---- URL import (with fallback) ----
+function UrlImportForm({ onClose }: { onClose: () => void }) {
   const importMut = useImportProduct();
   const createMut = useCreateProduct();
   const goProduct = useAppStore((s) => s.goProduct);
@@ -294,84 +338,8 @@ function ImportDialog({ onClose }: { onClose: () => void }) {
     setImages("");
   };
 
-  // ---- Step 1: paste URL ----
-  if (step === "import") {
+  if (step === "fallback") {
     return (
-      <>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Link2 className="h-5 w-5 text-primary" />
-            Importar producto real
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={onImport} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="import-url">Enlace de afiliado del producto *</Label>
-            <div className="relative">
-              <Globe className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="import-url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://www.amazon.com/dp/B0… o Temu / Falabella"
-                className="pl-9"
-                required
-                type="url"
-                autoFocus
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Pega el enlace de Amazon, Temu, Falabella u otra tienda. BLACKBOX
-              obtendrá los datos reales del producto y la IA lo analizará.
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-            <div className="flex items-start gap-2">
-              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-              <div className="text-xs text-muted-foreground">
-                <p className="font-medium text-foreground">¿Qué se obtiene automáticamente?</p>
-                <p className="mt-1">
-                  Nombre, descripción, imágenes, precio, valoración, envío y specs
-                  (según disponibilidad). Luego la IA genera análisis, score y FAQs.
-                </p>
-                <p className="mt-2 font-medium text-amber-300">
-                  ⚠ Si la tienda bloquea el scraping, pasaremos al modo manual — tu enlace de afiliado siempre se guarda.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={importMut.isPending} className="gap-1.5">
-              {importMut.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Importando…
-                </>
-              ) : (
-                <>
-                  <Link2 className="h-4 w-4" />
-                  Importar y analizar
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </>
-    );
-  }
-
-  // ---- Step 2: manual fallback (affiliate link always preserved!) ----
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <Link2 className="h-5 w-5 text-primary" />
-          Guardar enlace de afiliado
-        </DialogTitle>
-      </DialogHeader>
       <form onSubmit={onFallbackCreate} className="space-y-4">
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
           <div className="flex items-start gap-2">
@@ -379,15 +347,13 @@ function ImportDialog({ onClose }: { onClose: () => void }) {
             <div className="text-xs text-muted-foreground">
               <p className="font-medium text-foreground">La tienda bloqueó el scraping automático</p>
               <p className="mt-1">
-                No problem — tu{" "}
+                Tu{" "}
                 <span className="font-medium text-foreground">enlace de afiliado se guardará igual</span>{" "}
-                y generará dinero con cada clic. Solo completa los datos mínimos para
-                que el producto se vea bien. Puedes editarlos después.
+                y generará dinero con cada clic. Completa los datos mínimos.
               </p>
             </div>
           </div>
         </div>
-
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">Enlace de afiliado (guardado ✓)</Label>
           <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2">
@@ -396,46 +362,309 @@ function ImportDialog({ onClose }: { onClose: () => void }) {
             <Check className="ml-auto h-3.5 w-3.5 shrink-0 text-emerald-400" />
           </div>
         </div>
-
         <div className="space-y-2">
           <Label htmlFor="fb-name">Nombre del producto *</Label>
-          <Input id="fb-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: Reloj de Pareja de Cuarzo" required autoFocus />
+          <Input id="fb-name" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
         </div>
-
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="fb-price">Precio (S/) *</Label>
-            <Input id="fb-price" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Ej: 45.90" type="number" step="0.01" required />
+            <Input id="fb-price" value={price} onChange={(e) => setPrice(e.target.value)} type="number" step="0.01" required />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="fb-img">Imagen (URL, opcional)</Label>
-            <Input id="fb-img" value={images} onChange={(e) => setImages(e.target.value)} placeholder="https://…" type="url" />
+            <Label htmlFor="fb-img">Imagen URL (opcional)</Label>
+            <Input id="fb-img" value={images} onChange={(e) => setImages(e.target.value)} type="url" />
           </div>
         </div>
-
         <div className="space-y-2">
           <Label htmlFor="fb-desc">Descripción (opcional)</Label>
-          <Textarea id="fb-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Describe el producto brevemente…" />
+          <Textarea id="fb-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
         </div>
-
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => setStep("import")}>← Volver</Button>
           <Button type="submit" disabled={createMut.isPending} className="gap-1.5">
-            {createMut.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Guardando…
-              </>
-            ) : (
-              <>
-                <Check className="h-4 w-4" />
-                Guardar con enlace afiliado
-              </>
-            )}
+            {createMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            Guardar con enlace afiliado
           </Button>
         </DialogFooter>
       </form>
-    </>
+    );
+  }
+
+  return (
+    <form onSubmit={onImport} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="import-url">Enlace de afiliado del producto *</Label>
+        <div className="relative">
+          <Globe className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="import-url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://www.amazon.com/dp/B0… o Temu / Falabella"
+            className="pl-9"
+            required
+            type="url"
+            autoFocus
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Pega el enlace. BLACKBOX obtiene los datos reales y la IA analiza. Si la
+          tienda bloquea el scraping, pasamos al modo manual.
+        </p>
+      </div>
+      <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+        <div className="flex items-start gap-2">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+          <div className="text-xs text-muted-foreground">
+            <p className="font-medium text-foreground">Tu enlace de afiliado siempre se guarda</p>
+            <p className="mt-1">Scrapee o no, el link queda guardado y genera dinero con cada clic.</p>
+          </div>
+        </div>
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+        <Button type="submit" disabled={importMut.isPending} className="gap-1.5">
+          {importMut.isPending ? (
+            <><Loader2 className="h-4 w-4 animate-spin" /> Importando…</>
+          ) : (
+            <><Link2 className="h-4 w-4" /> Importar y analizar</>
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+// ---- Photo import (VLM extracts everything from a screenshot) ----
+function PhotoImportForm({ onClose }: { onClose: () => void }) {
+  const photoMut = usePhotoExtract();
+  const createMut = useCreateProduct();
+  const goProduct = useAppStore((s) => s.goProduct);
+  const [image, setImage] = useState<string | null>(null);
+  const [affiliateUrl, setAffiliateUrl] = useState("");
+  // extracted + editable fields
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [brand, setBrand] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Tecnología");
+  const [features, setFeatures] = useState("");
+  const [extracted, setExtracted] = useState(false);
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8_000_000) {
+      toast.error("La imagen es demasiado grande (máx 8MB)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImage(reader.result as string);
+      setExtracted(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const onAnalyze = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!image) return;
+    const t = toast.loading("La IA está leyendo la foto… (puede tardar 10-20s)");
+    try {
+      const res = await photoMut.mutateAsync({ image, affiliateUrl: affiliateUrl.trim() || undefined });
+      const ex = res.extracted;
+      if (ex.name) setName(ex.name);
+      if (ex.price != null) setPrice(String(ex.price));
+      if (ex.brand) setBrand(ex.brand);
+      if (ex.description) setDescription(ex.description);
+      if (ex.category) setCategory(ex.category);
+      if (ex.features.length) setFeatures(ex.features.join("\n"));
+      setExtracted(true);
+      toast.success("Datos extraídos por IA ✓ Revisa y guarda", { id: t });
+    } catch (err) {
+      toast.error("Error: " + (err as Error).message, { id: t });
+    }
+  };
+
+  const onSave = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !price.trim() || !affiliateUrl.trim()) return;
+    const t = toast.loading("Guardando producto…");
+    try {
+      const res = await createMut.mutateAsync({
+        name: name.trim(),
+        description: description.trim() || `Producto importado desde foto`,
+        category,
+        brand: brand.trim() || undefined,
+        images: [],
+        features: features.split("\n").map((s) => s.trim()).filter(Boolean),
+        sourceUrl: affiliateUrl.trim(),
+        offer: {
+          price: parseFloat(price) || 0,
+          originalPrice: null,
+          affiliateLink: affiliateUrl.trim(),
+          shippingTime: "No disponible",
+          availability: "in_stock",
+          currency: "PEN",
+        },
+      } as never);
+      toast.success("Producto creado ✓", { id: t });
+      onClose();
+      goProduct(res.product.id);
+    } catch (err) {
+      toast.error("Error: " + (err as Error).message, { id: t });
+    }
+  };
+
+  return (
+    <form onSubmit={extracted ? onSave : onAnalyze} className="space-y-4">
+      {!extracted ? (
+        // Step 1: upload photo + paste affiliate link
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="photo-file">Captura del producto *</Label>
+            <label
+              htmlFor="photo-file"
+              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-muted/20 px-4 py-8 text-center transition-colors hover:border-primary/40 hover:bg-primary/5"
+            >
+              {image ? (
+                <div className="relative w-full">
+                  <img src={image} alt="captura" className="mx-auto max-h-48 rounded-lg" />
+                  <p className="mt-2 text-xs text-muted-foreground">Click para cambiar</p>
+                </div>
+              ) : (
+                <>
+                  <Camera className="h-10 w-10 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Toma una captura o sube una foto</p>
+                    <p className="text-xs text-muted-foreground">De la página del producto (Temu, Amazon, etc)</p>
+                  </div>
+                </>
+              )}
+            </label>
+            <input id="photo-file" type="file" accept="image/*" onChange={onFileChange} className="hidden" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="photo-aff">Enlace de afiliado *</Label>
+            <div className="relative">
+              <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="photo-aff"
+                value={affiliateUrl}
+                onChange={(e) => setAffiliateUrl(e.target.value)}
+                placeholder="https://temu.to/… o https://amazon.com/dp/…"
+                className="pl-9"
+                type="url"
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              El enlace se guarda para generar comisión. La foto se usa solo para
+              extraer los datos del producto.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+            <div className="flex items-start gap-2">
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+              <div className="text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">¿Cómo funciona?</p>
+                <p className="mt-1">
+                  1. Toma captura de la página del producto (donde se vea nombre,
+                  precio, descripción). 2. Súbelo aquí. 3. La IA con visión lee todo
+                  automáticamente. 4. Revisa y guarda.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" disabled={!image || !affiliateUrl.trim() || photoMut.isPending} className="gap-1.5">
+              {photoMut.isPending ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Analizando foto…</>
+              ) : (
+                <><Sparkles className="h-4 w-4" /> Analizar con IA</>
+              )}
+            </Button>
+          </DialogFooter>
+        </>
+      ) : (
+        // Step 2: review & edit extracted data, then save
+        <>
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+            <div className="flex items-start gap-2">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+              <div className="text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">Datos extraídos por IA ✓</p>
+                <p className="mt-1">Revisa que todo esté correcto y guarda. Puedes editar cualquier campo.</p>
+              </div>
+            </div>
+          </div>
+
+          {image && (
+            <div className="flex justify-center">
+              <img src={image} alt="captura" className="max-h-32 rounded-lg border border-border" />
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="ex-aff">Enlace de afiliado</Label>
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2">
+              <Link2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+              <span className="truncate text-xs text-foreground">{affiliateUrl}</span>
+              <Check className="ml-auto h-3.5 w-3.5 shrink-0 text-emerald-400" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ex-name">Nombre *</Label>
+            <Input id="ex-name" value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="ex-price">Precio (S/) *</Label>
+              <Input id="ex-price" value={price} onChange={(e) => setPrice(e.target.value)} type="number" step="0.01" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ex-brand">Marca</Label>
+              <Input id="ex-brand" value={brand} onChange={(e) => setBrand(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ex-cat">Categoría</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger id="ex-cat"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {["Tecnología", "Audio", "Gaming", "Gadgets virales", "Accesorios móviles"].map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ex-desc">Descripción</Label>
+            <Textarea id="ex-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ex-feat">Características (una por línea)</Label>
+            <Textarea id="ex-feat" value={features} onChange={(e) => setFeatures(e.target.value)} rows={3} />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setExtracted(false)}>← Volver</Button>
+            <Button type="submit" disabled={createMut.isPending} className="gap-1.5">
+              {createMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Guardar producto
+            </Button>
+          </DialogFooter>
+        </>
+      )}
+    </form>
   );
 }
 
