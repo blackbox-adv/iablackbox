@@ -220,3 +220,23 @@ Work Log:
 
 Stage Summary:
 - Temu cannot be auto-scraped (anti-bot blocks both static reader AND headless browser). Amazon partially works. The practical path for Temu products is manual entry via "Crear manualmente" — paste the product URL as sourceUrl, enter name/description/images/price by hand, then "Recalcular IA" generates the analysis. The import-with-headless fallback remains for less-protected stores. This is the honest real-world limitation: Temu/Amazon actively block automated access; only official affiliate APIs would give reliable data.
+
+---
+Task ID: v2-affiliate-fix
+Agent: main
+Task: Preserve affiliate link when scraping fails — the link is the monetization
+
+Work Log:
+- Key insight from user: the affiliate link itself works and earns money, so it must ALWAYS be saved even when scraping fails.
+- Updated POST /api/products to accept an optional `offer` object (price + affiliateLink) — creates the offer in the same request as the product. Also records PriceHistory.
+- Updated useCreateProduct hook to pass the offer field.
+- Redesigned ImportDialog with TWO steps:
+  - Step 1: paste URL → try scraping (static + headless fallback)
+  - Step 2 (fallback): if scraping fails, show "Guardar enlace de afiliado" form — the URL is pre-saved, admin enters just name + price + optional image/description. The affiliate link is ALWAYS preserved.
+- Improved mineNameFromBody() in headless scraper: expanded skip regex to filter price labels ("Original price CA$1.39", "Sale", "Save", "Off", "Coupon", etc.) and added isPriceOnly check to skip lines that are just currency values.
+- Verified end-to-end: imported temu.to/k/gokcfge3l94 → headless scraper extracted real data (price CA$1.39, 8 images) → POST /api/products/import 201 in 47s → product created with AI analysis (VENTAJAS/DESVENTAJAS/CASOS DE USO) → affiliate link https://temu.to/k/gokcfge3l94 confirmed present on product page.
+- Deleted the bad-name test product. 3 products remain.
+- `bun run lint` clean.
+
+Stage Summary:
+- Affiliate links are now NEVER lost. When Temu/Amazon blocks scraping, the import dialog switches to a manual fallback that saves the link + asks for minimum display data (name + price). When the headless browser succeeds (as it did for Temu this time), the product is created automatically with the affiliate link. Either way, "Ver oferta" links to the exact product URL and earns the affiliate commission.

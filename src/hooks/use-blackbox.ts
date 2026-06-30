@@ -264,7 +264,19 @@ export function useUpdateAiSettings() {
 export function useCreateProduct() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: Partial<Product> & { name: string; description: string; category: string }) =>
+    mutationFn: (body: Partial<Product> & {
+      name: string;
+      description: string;
+      category: string;
+      offer?: {
+        price?: number | null;
+        originalPrice?: number | null;
+        affiliateLink?: string;
+        shippingTime?: string;
+        availability?: string;
+        currency?: string;
+      } | null;
+    }) =>
       jfetch<{ product: Product }>("/api/products", {
         method: "POST",
         body: JSON.stringify(body),

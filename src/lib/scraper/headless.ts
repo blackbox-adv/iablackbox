@@ -149,11 +149,13 @@ function isGenericName(name: string): boolean {
  * product description.
  */
 function mineNameFromBody(body: string): string | null {
-  const skip = /^(free|sign|search|categor|support|order|get the|start sell|join|subtotal|min\.|price adj|free return|up to|within|refund|delivery|special for you|this item|item details|quick look|couple|women|men|birthday|present|suitable)/i;
+  const skip = /^(free|sign|search|categor|support|order|get the|start sell|join|subtotal|min\.|price adj|free return|up to|within|refund|delivery|special for you|this item|item details|quick look|couple|women|men|birthday|present|suitable|original price|sale|save|off|coupon|new|trending|best seller|hot|deal|shipping|subtotal|total|checkout|add to|buy|cart|sign|register|login|account|app|download|sell|join)/i;
+  // Also skip lines that are just prices (e.g. "CA$1.39", "S/45.90")
+  const isPriceOnly = /^[\$\xA3\xA5]|^(CA|US|AU)?\$?\s*[\d.,]+\s*(USD|PEN|CAD|AUD)?$/i;
   const lines = body
     .split("\n")
     .map((l) => l.replace(/[\u200b]/g, "").trim())
-    .filter((l) => l.length > 20 && l.length < 200 && !skip.test(l));
+    .filter((l) => l.length > 20 && l.length < 200 && !skip.test(l) && !isPriceOnly.test(l));
   return lines[0] || null;
 }
 

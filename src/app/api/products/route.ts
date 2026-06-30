@@ -45,6 +45,17 @@ interface CreateProductBody {
   specs?: Record<string, string>;
   isViral?: boolean;
   sourceUrl?: string | null;
+  // Optional: create an offer (price + affiliate link) in the same request.
+  // Used by the manual fallback when scraping fails — the affiliate link is
+  // the monetization, so we always save it.
+  offer?: {
+    price?: number | null;
+    originalPrice?: number | null;
+    affiliateLink?: string;
+    shippingTime?: string;
+    availability?: string;
+    currency?: string;
+  } | null;
 }
 
 export async function POST(req: NextRequest) {
@@ -90,6 +101,49 @@ export async function POST(req: NextRequest) {
         aiScores: { orderBy: { updatedAt: "desc" }, take: 1 },
       },
     });
+
+    // Create an offer if the admin provided price/affiliate link (manual fallback)
+    if (body.offer && sourceStore) {
+      const o = body.offer;
+      await db.offer.create({
+        data: {
+          productId: created.id,
+          store: sourceStore,
+          price: o.price ?? 0,
+          originalPrice: o.originalPrice ?? null,
+          affiliateLink: o.affiliateLink ?? body.sourceUrl ?? "",
+          shippingTime: o.shippingTime ?? "No disponible",
+          shippingCost: 0,
+          availability: o.availability ?? "in_stock",
+          currency: o.currency ?? "PEN",
+          updatedAt: new Date(),
+        },
+      });
+      // Record initial price history if there's a real price
+      if (o.price != null && o.price > 0) {
+        await db.priceHistory.create({
+          data: {
+            productId: created.id,
+            store: sourceStore,
+            price: o.price,
+            currency: o.currency ?? "PEN",
+            recordedAt: new Date(),
+          },
+        });
+      }
+      // Re-fetch with the new offer
+      const withOffer = await db.product.findUnique({
+        where: { id: created.id },
+        include: {
+          offers: { orderBy: { price: "asc" } },
+          aiScores: { orderBy: { updatedAt: "desc" }, take: 1 },
+        },
+      });
+      if (withOffer) {
+        const product: Product = parseProduct(withOffer);
+        return NextResponse.json({ product }, { status: 201 });
+      }
+    }
 
     const product: Product = parseProduct(created);
     return NextResponse.json({ product }, { status: 201 });

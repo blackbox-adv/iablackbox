@@ -45,6 +45,7 @@ import {
   CheckSquare,
   Sparkles,
   Globe,
+  Check,
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
@@ -223,85 +224,212 @@ export function AdminProducts() {
   );
 }
 
-// ---------- Import dialog ----------
+// ---------- Import dialog (with manual fallback to preserve affiliate link) ----------
 function ImportDialog({ onClose }: { onClose: () => void }) {
   const importMut = useImportProduct();
+  const createMut = useCreateProduct();
   const goProduct = useAppStore((s) => s.goProduct);
+  const [step, setStep] = useState<"import" | "fallback">("import");
   const [url, setUrl] = useState("");
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [description, setDescription] = useState("");
+  const [images, setImages] = useState("");
 
   const onImport = async (e: FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
-    const t = toast.loading("Importando producto real… (scraping + análisis IA)");
+    const t = toast.loading("Importando producto… (scraping + análisis IA)");
     try {
       const res = await importMut.mutateAsync({ url: url.trim() });
       toast.success("Producto importado y analizado con IA", { id: t });
       onClose();
-      setUrl("");
+      reset();
       goProduct(res.product.id);
     } catch (err) {
-      toast.error("Error al importar: " + (err as Error).message, { id: t });
+      const msg = (err as Error).message;
+      if (msg.includes("no devolvió datos") || msg.includes("anti-scraping")) {
+        toast.info("No se pudo scrapear — guardaremos tu enlace de afiliado", { id: t });
+        setStep("fallback");
+      } else {
+        toast.error("Error al importar: " + msg, { id: t });
+      }
     }
   };
 
+  const onFallbackCreate = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !price.trim()) return;
+    const t = toast.loading("Guardando producto con enlace de afiliado…");
+    try {
+      const res = await createMut.mutateAsync({
+        name: name.trim(),
+        description: description.trim() || `Producto importado desde ${url}`,
+        category: "Tecnología",
+        images: images ? [images] : [],
+        sourceUrl: url.trim(),
+        offer: {
+          price: parseFloat(price) || 0,
+          affiliateLink: url.trim(),
+          shippingTime: "No disponible",
+          availability: "in_stock",
+          currency: "PEN",
+        },
+      } as never);
+      toast.success("Producto creado con enlace de afiliado ✓", { id: t });
+      onClose();
+      reset();
+      goProduct(res.product.id);
+    } catch (err) {
+      toast.error("Error: " + (err as Error).message, { id: t });
+    }
+  };
+
+  const reset = () => {
+    setStep("import");
+    setUrl("");
+    setName("");
+    setPrice("");
+    setDescription("");
+    setImages("");
+  };
+
+  // ---- Step 1: paste URL ----
+  if (step === "import") {
+    return (
+      <>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Link2 className="h-5 w-5 text-primary" />
+            Importar producto real
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={onImport} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="import-url">Enlace de afiliado del producto *</Label>
+            <div className="relative">
+              <Globe className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="import-url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://www.amazon.com/dp/B0… o Temu / Falabella"
+                className="pl-9"
+                required
+                type="url"
+                autoFocus
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Pega el enlace de Amazon, Temu, Falabella u otra tienda. BLACKBOX
+              obtendrá los datos reales del producto y la IA lo analizará.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+            <div className="flex items-start gap-2">
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+              <div className="text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">¿Qué se obtiene automáticamente?</p>
+                <p className="mt-1">
+                  Nombre, descripción, imágenes, precio, valoración, envío y specs
+                  (según disponibilidad). Luego la IA genera análisis, score y FAQs.
+                </p>
+                <p className="mt-2 font-medium text-amber-300">
+                  ⚠ Si la tienda bloquea el scraping, pasaremos al modo manual — tu enlace de afiliado siempre se guarda.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" disabled={importMut.isPending} className="gap-1.5">
+              {importMut.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Importando…
+                </>
+              ) : (
+                <>
+                  <Link2 className="h-4 w-4" />
+                  Importar y analizar
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </>
+    );
+  }
+
+  // ---- Step 2: manual fallback (affiliate link always preserved!) ----
   return (
     <>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <Link2 className="h-5 w-5 text-primary" />
-          Importar producto real
+          Guardar enlace de afiliado
         </DialogTitle>
       </DialogHeader>
-      <form onSubmit={onImport} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="import-url">Enlace de afiliado del producto *</Label>
-          <div className="relative">
-            <Globe className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              id="import-url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://www.amazon.com/dp/B0… o Temu / Falabella"
-              className="pl-9"
-              required
-              type="url"
-              autoFocus
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Pega el enlace de Amazon, Temu, Falabella u otra tienda. BLACKBOX
-            obtendrá los datos reales del producto y la IA lo analizará.
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+      <form onSubmit={onFallbackCreate} className="space-y-4">
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
           <div className="flex items-start gap-2">
-            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
             <div className="text-xs text-muted-foreground">
-              <p className="font-medium text-foreground">¿Qué se obtiene automáticamente?</p>
+              <p className="font-medium text-foreground">La tienda bloqueó el scraping automático</p>
               <p className="mt-1">
-                Nombre, descripción, imágenes, precio, precio anterior, valoración,
-                reseñas, envío, marca y especificaciones (según disponibilidad).
-                Luego la IA genera: resumen, ventajas, desventajas, casos de uso,
-                puntuación y FAQs.
+                No problem — tu{" "}
+                <span className="font-medium text-foreground">enlace de afiliado se guardará igual</span>{" "}
+                y generará dinero con cada clic. Solo completa los datos mínimos para
+                que el producto se vea bien. Puedes editarlos después.
               </p>
-              <p className="mt-2 font-medium text-amber-300">⚠ Si un dato no existe, se mostrará “No disponible”. Nunca se inventan datos.</p>
             </div>
           </div>
         </div>
 
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Enlace de afiliado (guardado ✓)</Label>
+          <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2">
+            <Link2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+            <span className="truncate text-xs text-foreground">{url}</span>
+            <Check className="ml-auto h-3.5 w-3.5 shrink-0 text-emerald-400" />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="fb-name">Nombre del producto *</Label>
+          <Input id="fb-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: Reloj de Pareja de Cuarzo" required autoFocus />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="fb-price">Precio (S/) *</Label>
+            <Input id="fb-price" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Ej: 45.90" type="number" step="0.01" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="fb-img">Imagen (URL, opcional)</Label>
+            <Input id="fb-img" value={images} onChange={(e) => setImages(e.target.value)} placeholder="https://…" type="url" />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="fb-desc">Descripción (opcional)</Label>
+          <Textarea id="fb-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Describe el producto brevemente…" />
+        </div>
+
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" disabled={importMut.isPending} className="gap-1.5">
-            {importMut.isPending ? (
+          <Button type="button" variant="outline" onClick={() => setStep("import")}>← Volver</Button>
+          <Button type="submit" disabled={createMut.isPending} className="gap-1.5">
+            {createMut.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Importando…
+                Guardando…
               </>
             ) : (
               <>
-                <Link2 className="h-4 w-4" />
-                Importar y analizar
+                <Check className="h-4 w-4" />
+                Guardar con enlace afiliado
               </>
             )}
           </Button>
