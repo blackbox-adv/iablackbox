@@ -5,7 +5,6 @@ import {
   formatPEN,
   discountPercent,
   STORES,
-  CLASSIFICATIONS,
 } from "@/lib/constants";
 import { useAppStore } from "@/lib/store";
 import { bestOffer, scoreOf, classificationOf } from "@/hooks/use-blackbox";
@@ -22,14 +21,13 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
   const score = scoreOf(product);
   const cls = classificationOf(product);
   const discount = best ? discountPercent(best.price, best.originalPrice) : null;
-  const meta = CLASSIFICATIONS[cls];
   const image = product.images?.[0];
 
   // If the product has a slug, link to the SSR indexable page /producto/[slug];
   // otherwise fall back to the SPA navigation (for old products without slug).
   const href = product.slug ? `/producto/${product.slug}` : null;
   const className =
-    "group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card/60 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-foreground/15 hover:shadow-lg hover:shadow-black/20 animate-fade-up";
+    "group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl glass shadow-soft transition-all duration-300 hover:-translate-y-1.5 hover:border-emerald-400/30 hover:shadow-float animate-fade-up";
   const style = { animationDelay: `${Math.min(index * 50, 400)}ms` };
 
   const inner = (
@@ -39,29 +37,31 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
         <ProductImage
           src={image}
           alt={product.name}
-          className="h-full w-full transition-transform duration-500 group-hover:scale-105"
+          className="h-full w-full group-hover:scale-105"
         />
-        <div className="absolute left-2 top-2 flex flex-wrap gap-1">
+        {/* Subtle gradient overlay that fades in on hover for depth */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
           {best && <StoreBadgeMini store={best.store} />}
           {product.isViral && <ViralBadge />}
         </div>
         {discount && (
-          <div className="absolute right-2 top-2">
+          <div className="absolute right-3 top-3">
             <DiscountBadge percent={discount} />
           </div>
         )}
-        <div className="absolute bottom-2 right-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+        <div className="absolute bottom-3 right-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
           <CompareToggle productId={product.id} />
         </div>
       </div>
 
       {/* Body */}
-      <div className="flex flex-1 flex-col gap-2 p-3">
+      <div className="flex flex-1 flex-col gap-2.5 p-5">
         <div className="flex items-start justify-between gap-2">
           <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
             {product.name}
           </h3>
-          <ScoreRing score={score} classification={cls} size={42} />
+          <ScoreRing score={score} classification={cls} size={44} />
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -75,12 +75,12 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
         </div>
 
         {/* Price */}
-        <div className="mt-auto flex items-end justify-between pt-1">
+        <div className="mt-auto flex items-end justify-between gap-2 pt-2">
           <div>
             {best ? (
               <>
                 <div className="flex items-baseline gap-1.5">
-                  <span className={cn("text-lg font-bold tabular-nums", meta.scoreColor)}>
+                  <span className="text-xl font-bold tabular-nums tracking-tight text-gradient">
                     {formatPEN(best.price)}
                   </span>
                   {best.originalPrice && best.originalPrice > best.price && (
@@ -97,8 +97,15 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
               <span className="text-sm text-muted-foreground">Sin ofertas</span>
             )}
           </div>
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors group-hover:border-primary/40 group-hover:bg-primary/10 group-hover:text-primary">
-            <ArrowRight className="h-3.5 w-3.5" />
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-muted-foreground backdrop-blur-sm",
+              "translate-y-1 opacity-0 transition-all duration-300",
+              "group-hover:translate-y-0 group-hover:border-emerald-400/30 group-hover:bg-emerald-400/10 group-hover:text-emerald-300 group-hover:opacity-100"
+            )}
+          >
+            Ver producto
+            <ArrowRight className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-0.5" />
           </span>
         </div>
       </div>
@@ -125,8 +132,8 @@ function StoreBadgeMini({ store }: { store: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide backdrop-blur-sm",
-        meta.badge
+        "inline-flex items-center rounded-md glass-strong px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide backdrop-blur-sm",
+        meta.color
       )}
     >
       {meta.label}

@@ -330,3 +330,53 @@ Work Log:
 
 Stage Summary:
 - BLACKBOX is now running on Supabase PostgreSQL. All data (products, offers, AI scores, settings, clicks) persists in the cloud. The app is ready for production deployment. The pooler connection (port 5432 session mode) works through the sandbox. Next steps from the audit: historial de precios visible + IA conversacional.
+
+---
+Task ID: d3
+Agent: full-stack-developer
+Task: Redesign ProductCard + badges visual style (premium SaaS — Perplexity + Apple + Linear)
+
+Work Log:
+- Read worklog.md, globals.css (new `.glass`, `.glass-strong`, `.shadow-soft`, `.shadow-float`, `.shadow-glow-primary`, `.text-gradient`, `.surface-1/2/3` utilities + functional color vars), and the 4 target components + constants.ts + compare-toggle.tsx to understand existing structure/props and usage in product-view / compare-view / SSR product page.
+- **score-ring.tsx**: bumped stroke 4 → 5; smoother animation `duration-700` → `duration-1000 ease-out`; added `[filter:drop-shadow(0_0_4px_currentColor)]` on the progress arc + `[text-shadow:0_0_10px_currentColor]` on the score number so it glows in its classification color (emerald/lime/amber/rose) and pops on dark surfaces. Number stays `text-base font-bold tabular-nums tracking-tight`. Props/types unchanged.
+- **product-image.tsx**: extracted a richer 3-stop `PLACEHOLDER_GRADIENT` (`from-zinc-800/40 via-zinc-900/70 to-black/90`) used for both the no-src placeholder and the runtime onError fallback; added a base `transition-transform duration-700 ease-out` on the `<img>` so hover scale animates smoothly even when a parent omits a transition class. Props/priority/onError logic unchanged.
+- **badges.tsx**: 
+  - `StoreBadge`: switched to `.glass-strong` + `backdrop-blur-sm`, slightly larger (`px-2`), uses `meta.color` for accent text (amber/orange/emerald).
+  - `ClassificationBadge`: glass pill — `border-white/[0.08] bg-white/[0.04] backdrop-blur-sm`, keeps emoji + uses `meta.scoreColor` (emerald/lime/amber/rose) for functional color mapping.
+  - `OfferBadge`: same glass pill structure, accepts the per-type className from `offerBadge()` (emerald=mejor precio, orange=buena oferta, amber=esperar, zinc=normal).
+  - `ViralBadge`: kept amber but added `backdrop-blur-sm` and tightened borders.
+  - `DiscountBadge`: bolder — full `bg-rose-500` (was /90), `text-[11px]` (was /10), added `shadow-soft` + `ring-1 ring-rose-400/40` for depth.
+  - All exports/props unchanged; only className composition touched.
+- **product-card.tsx**:
+  - Card surface: `glass shadow-soft` + `rounded-2xl`; hover: `-translate-y-1.5`, `border-emerald-400/30`, `shadow-float` (was flat `bg-card/60 shadow-sm`).
+  - Image area: kept `aspect-square`; added a `from-black/50 via-transparent` gradient overlay that fades in on hover; CompareToggle stays bottom-right (now with `duration-300`); badges repositioned with more breathing room (`left-3 top-3`, `right-3 top-3`, `gap-1.5`).
+  - Body: `p-3` → `p-5`, `gap-2` → `gap-2.5`, ScoreRing `size=42` → `44` so it pops next to the title.
+  - Price: `text-lg font-bold` → `text-xl font-bold tracking-tight text-gradient` (green gradient on best offer price), keeping the strikethrough original price + store label.
+  - Replaced the old bottom-right circle arrow with a refined "Ver producto →" pill that slides up + fades in on hover (`translate-y-1 opacity-0` → `group-hover:translate-y-0 ... opacity-100`), border/bg/text shift to emerald on hover, ArrowRight nudges `+0.5` on hover.
+  - Removed now-unused `CLASSIFICATIONS` import and `meta` var (was only used for the price color which is now `text-gradient`).
+- **constants.ts** (single visual-only tweak to satisfy the "functional colors" spec for OfferBadge): `offerBadge()` "Buena oferta" className changed from `bg-sky-500/15 text-sky-300 border-sky-500/30` → `bg-orange-500/15 text-orange-300 border-orange-500/30` (matches `--color-offer` orange; conditions/labels/emojis untouched).
+- Ran `bun run lint` → clean (no errors, no warnings).
+
+Stage Summary:
+- BLACKBOX product cards + badge primitives now match the premium dark-theme spec: layered glass surfaces, hairline borders, soft shadows that lift to `.shadow-float` on hover, gradient price text, and a subtle "Ver producto →" affordance that animates in. ScoreRing glows in its classification color. ProductImage has a richer 3-stop placeholder gradient and smoother hover scaling. All badge variants use `.glass-strong`/glass pills with `border-white/[0.08]` + `backdrop-blur-sm` and functional colors (emerald=best, orange=offer, amber=wait, rose=high/not-recommended, amber=viral). No props, imports, exports, or logic changed — only className + structural spacing. `bun run lint` passes.
+
+---
+Task ID: redesign-premium
+Agent: main
+Task: Complete premium visual redesign (Perplexity + Apple + Linear inspired)
+
+Work Log:
+- Rewrote globals.css: layered dark theme with 3 tonal surfaces (#0F1115, #151922, #1B2130 via oklch), glassmorphism utilities (.glass, .glass-strong), soft shadows (.shadow-soft, .shadow-float, .shadow-glow-primary), functional colors (best-price green, ai-recommend blue, offer orange, high-price red), text-gradient utility, bg-grid/bg-dots, premium animations (fade-up, fade-in, scale-in, shimmer, pulse-glow, float).
+- Redesigned HeroSearch: Perplexity-style — large title "¿Qué producto quieres comparar hoy?" with gradient text, prominent rounded search bar with focus glow, suggestion pills with icons, trust indicators row, background glows + grid.
+- Redesigned HomeView: more breathing room (space-y-20, py-20), section headers with glass icon badges + accent colors, category cards with glass-strong icon containers, comparator section as elegant glass card with glow.
+- Redesigned Header: glass blur, rounded search, refined compare badge with emerald count, cleaner logo.
+- Redesigned Skeletons: glass + shimmer premium loading states.
+- Subagent redesigned ProductCard: glass cards, hover translate + shadow-float + emerald border glow, text-gradient price, "Ver producto →" hint on hover, more padding.
+- Subagent redesigned Badges: glass-strong with backdrop-blur, functional colors (excellent=emerald, good=lime, regular=amber, not_recommended=rose), refined discount badge.
+- Subagent redesigned ScoreRing: thicker stroke, glow on arc + number, smoother animation.
+- Redesigned /producto/[slug] page: 3xl rounded cards with glass + shadow-soft, AI recommendation card as hero (emerald gradient bg, pulse-glow icon, shadow-glow-primary, score /100 prominent), store offers with "🔥 MEJOR PRECIO" badge, better spacing throughout (py-8, gap-8, space-y-6), similar products as premium glass cards, breadcrumbs with separators, provenance card refined.
+- Verified with VLM: "estilo moderno y premium... evoca a Perplexity/Apple... tonos diferenciados en lugar de plano... tarjetas elegantes". Mobile responsive tested at 390x844.
+- `bun run lint` clean. No runtime errors.
+
+Stage Summary:
+- BLACKBOX now looks like a premium SaaS product (Perplexity + Apple + Linear inspired). Dark theme with layered tonal surfaces instead of flat black, glassmorphism, soft shadows, functional colors for important info, breathing room between sections, Perplexity-style hero search, AI recommendation card as the visual hero of product pages. All functionality preserved — no backend/API/DB/route changes.

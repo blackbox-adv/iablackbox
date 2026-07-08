@@ -16,7 +16,7 @@ export function ScoreRing({
   showLabel?: boolean;
 }) {
   const meta = CLASSIFICATIONS[classification] ?? CLASSIFICATIONS.regular;
-  const stroke = 4;
+  const stroke = 5;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const offset = c - (Math.max(0, Math.min(100, score)) / 100) * c;
@@ -53,11 +53,21 @@ export function ScoreRing({
             stroke="currentColor"
             strokeDasharray={c}
             strokeDashoffset={offset}
-            className={cn("transition-all duration-700", colorClass)}
+            className={cn(
+              "transition-all duration-1000 ease-out [filter:drop-shadow(0_0_4px_currentColor)]",
+              colorClass
+            )}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={cn("text-base font-bold tabular-nums", colorClass)}>{score}</span>
+          <span
+            className={cn(
+              "text-base font-bold tabular-nums tracking-tight [text-shadow:0_0_10px_currentColor]",
+              colorClass
+            )}
+          >
+            {score}
+          </span>
         </div>
       </div>
       {showLabel && (

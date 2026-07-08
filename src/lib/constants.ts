@@ -113,7 +113,7 @@ export function offerBadge(
     return {
       emoji: "🔥",
       label: "Buena oferta",
-      className: "bg-sky-500/15 text-sky-300 border-sky-500/30",
+      className: "bg-orange-500/15 text-orange-300 border-orange-500/30",
     };
   }
   if (price > minPrice * 1.2) {
