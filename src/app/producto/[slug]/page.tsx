@@ -15,6 +15,7 @@ import { PriceBars } from "@/components/blackbox/price-bars";
 import { ProductCompareButton } from "@/components/site/product-compare-button";
 import { OfferButton } from "@/components/site/offer-button";
 import { ProductChat } from "@/components/site/product-chat";
+import { PriceHistoryChart, type PriceHistoryPoint } from "@/components/site/price-history-chart";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -94,6 +95,18 @@ export default async function ProductPage({ params }: PageProps) {
     orderBy: { updatedAt: "desc" },
   });
   const similar = similarRaw.map(parseProduct);
+
+  // Price history for the chart
+  const historyRaw = await db.priceHistory.findMany({
+    where: { productId: product.id },
+    orderBy: { recordedAt: "asc" },
+    take: 100,
+  });
+  const priceHistory: PriceHistoryPoint[] = historyRaw.map((h) => ({
+    date: h.recordedAt.toISOString(),
+    price: h.price,
+    store: h.store,
+  }));
 
   return (
     <>
@@ -346,6 +359,9 @@ export default async function ProductPage({ params }: PageProps) {
                   Precios actualizados {offers[0] ? timeAgo(offers[0].updatedAt) : "—"} · Links de afiliado
                 </p>
               </div>
+
+              {/* 📈 Price history chart */}
+              {priceHistory.length > 0 && <PriceHistoryChart data={priceHistory} />}
 
               {/* ✨ Conversational AI chat — the "wow" differentiator */}
               <ProductChat productId={product.id} />

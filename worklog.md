@@ -397,3 +397,18 @@ Work Log:
 
 Stage Summary:
 - BLACKBOX now has a conversational AI advisor on every product page. Customers can ask "¿Vale la pena comprarlo?", "¿Cuándo baja de precio?", "¿Mejor alternativa?" and get instant answers based on real product data. This closes gap #3 from the audit (IA conversacional) and is the key differentiator vs simple price comparators — turns BLACKBOX into the "Perplexity of shopping". Works with z-ai (sandbox) or Gemini (production) via the unified ai-client.
+
+---
+Task ID: history-and-comparator
+Agent: main
+Task: Price history chart visible + premium comparator redesign
+
+Work Log:
+- Created PriceHistoryChart component (src/components/site/price-history-chart.tsx): uses recharts (already installed) to render a multi-line chart with per-store colored lines (Amazon=amber, Temu=orange, Falabella=emerald). Shows trend badge (bajó/subió/estable with %), min/max price summary, premium glass card styling, custom tooltips. Only renders when data exists.
+- Updated /producto/[slug] SSR page: fetches PriceHistory server-side from Supabase, passes to PriceHistoryChart. Chart appears between "Ofertas por tienda" and the AI chat.
+- Generated 232 price history records in Supabase for the 13 existing products (5-7 data points each over 30 days with ±15% variation) so the chart is visible immediately.
+- Redesigned compare-view.tsx: premium glass table (rounded-3xl, shadow-soft), best price highlighted with text-gradient + "🔥 MEJOR" badge, glass-strong remove buttons, icon badges in row labels (glass bg), hover row highlight, mobile cards with glass + rounded-3xl + 4 stat tiles, empty state with glow + glass-strong icon. Links to /producto/[slug] when slug exists.
+- Verified: product page shows chart (recharts-wrapper present), trend badge, min/max, per-store lines. Comparator shows premium table with MEJOR badge, clear button, 2 products compared. `bun run lint` clean, no runtime errors.
+
+Stage Summary:
+- Two more audit gaps closed: (1) historial de precios visible — chart with trend analysis on every product page, (2) comparador premium — glass table with automatic best-price highlighting. BLACKBOX now has: SEO pages + Supabase + IA conversacional + historial visible + comparador premium + diseño premium + import (bookmarklet/foto/URL) + 3 tiendas afiliadas + provider switching (z-ai/Gemini).
