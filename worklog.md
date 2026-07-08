@@ -312,3 +312,21 @@ Work Log:
 
 Stage Summary:
 - BLACKBOX now has indexable product pages. Google can crawl /producto/[slug] and see full content + structured data (Product, FAQ, Breadcrumb, Review schemas) for rich results. Sitemap + robots guide crawlers. This closes the #1 SEO gap from the audit. The SPA home/admin/comparar still work via Zustand; product cards now link to real SSR URLs when slug exists.
+
+---
+Task ID: supabase-migration
+Agent: main
+Task: Migrate BLACKBOX from SQLite to Supabase PostgreSQL
+
+Work Log:
+- Updated .env with Supabase pooler connection string (aws-1-us-east-2, port 5432 session mode — port 5432 direct and 6543 transaction mode both tested; 5432 session mode works for Prisma schema engine).
+- Changed prisma/schema.prisma provider from "sqlite" to "postgresql".
+- Ran prisma db push → created all 12 tables (Product, Offer, AiScore, Click, HomeSection, AffiliateLink, AiSetting, PriceHistory, ScheduledOffer, Favorite, PriceAlert, User) in Supabase public schema.
+- Ran seed script → inserted 13 products, 39 offers, 13 AI scores, 5 home sections, 3 affiliates, 4 AI settings.
+- Generated slugs for all 13 seeded products.
+- Cleaned .next cache + regenerated Prisma client + restarted dev server.
+- Verified: home page loads with 14 product cards from Supabase. SSR product page /producto/audifonos-inalambricos-bluetooth-5-3-con-anc loads with correct title + 3 JSON-LD schemas (Product, BreadcrumbList, Review). All queries now hit PostgreSQL (public."Product") instead of SQLite.
+- `bun run lint` clean.
+
+Stage Summary:
+- BLACKBOX is now running on Supabase PostgreSQL. All data (products, offers, AI scores, settings, clicks) persists in the cloud. The app is ready for production deployment. The pooler connection (port 5432 session mode) works through the sandbox. Next steps from the audit: historial de precios visible + IA conversacional.
