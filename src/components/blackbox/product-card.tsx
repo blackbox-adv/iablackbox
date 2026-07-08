@@ -25,12 +25,15 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
   const meta = CLASSIFICATIONS[cls];
   const image = product.images?.[0];
 
-  return (
-    <article
-      onClick={() => goProduct(product.id)}
-      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card/60 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-foreground/15 hover:shadow-lg hover:shadow-black/20 animate-fade-up"
-      style={{ animationDelay: `${Math.min(index * 50, 400)}ms` }}
-    >
+  // If the product has a slug, link to the SSR indexable page /producto/[slug];
+  // otherwise fall back to the SPA navigation (for old products without slug).
+  const href = product.slug ? `/producto/${product.slug}` : null;
+  const className =
+    "group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card/60 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-foreground/15 hover:shadow-lg hover:shadow-black/20 animate-fade-up";
+  const style = { animationDelay: `${Math.min(index * 50, 400)}ms` };
+
+  const inner = (
+    <>
       {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-muted/30">
         <ProductImage
@@ -38,7 +41,6 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
           alt={product.name}
           className="h-full w-full transition-transform duration-500 group-hover:scale-105"
         />
-        {/* top badges */}
         <div className="absolute left-2 top-2 flex flex-wrap gap-1">
           {best && <StoreBadgeMini store={best.store} />}
           {product.isViral && <ViralBadge />}
@@ -48,7 +50,6 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
             <DiscountBadge percent={discount} />
           </div>
         )}
-        {/* compare toggle */}
         <div className="absolute bottom-2 right-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
           <CompareToggle productId={product.id} />
         </div>
@@ -89,7 +90,7 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
                   )}
                 </div>
                 <span className="text-[11px] text-muted-foreground">
-                  en {STORES[best.store]?.label}
+                  en {STORES[best.store as keyof typeof STORES]?.label}
                 </span>
               </>
             ) : (
@@ -101,6 +102,19 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
           </span>
         </div>
       </div>
+    </>
+  );
+
+  if (href) {
+    return (
+      <a href={href} className={className} style={style} aria-label={product.name}>
+        {inner}
+      </a>
+    );
+  }
+  return (
+    <article onClick={() => goProduct(product.id)} className={className} style={style} role="link">
+      {inner}
     </article>
   );
 }

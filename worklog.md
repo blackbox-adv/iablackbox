@@ -291,3 +291,24 @@ Work Log:
 
 Stage Summary:
 - The bookmarklet is the definitive solution for Temu/Amazon/Falabella product import. The admin drags "➕ Agregar a BLACKBOX" to their bookmarks bar, browses to any product page, clicks the bookmark — BLACKBOX opens with all data pre-filled, admin reviews and saves, AI analyzes automatically. No scraping, no anti-bot blocks, no photos needed. Works because it runs in the user's real browser where the page is already rendered. The affiliate link (page URL) is always preserved for monetization.
+
+---
+Task ID: seo-pages
+Agent: main
+Task: SSR product pages /producto/[slug] with SEO metadata + Schema.org JSON-LD + sitemap + robots
+
+Work Log:
+- Created SiteHeader (client, uses next/link + useRouter for search) and SiteFooter (server, uses Links) for SSR pages — replace Zustand-based header on indexable routes.
+- Created use-compare-count hook (localStorage-based) so compare list persists across SPA + SSR pages.
+- Created src/lib/seo.ts: generates Schema.org JSON-LD — productJsonLd (Product + offers + aggregateRating), faqJsonLd (FAQPage), breadcrumbJsonLd (BreadcrumbList Home>Category>Product), reviewJsonLd (Review from AI score). allProductSchemas() returns the array.
+- Created /producto/[slug]/page.tsx (Server Component): generateMetadata() returns title/description/og/twitter/canonical. fetches product by slug from DB. Renders breadcrumbs, H1, images, price comparison bars, store offers with affiliate links, AI opinion (summary/reasoning/recommendation), advantages/disadvantages/useCases, FAQs, similar products (same category), source provenance. Injects all JSON-LD schemas into HTML. revalidate=3600 (ISR).
+- Created ProductCompareButton (client) and OfferButton (client, tracks clicks) as interactive islands inside the SSR page.
+- Updated ProductCard: when product.slug exists, wraps card in <a href="/producto/[slug]"> (real indexable URL); falls back to Zustand goProduct for old products without slug.
+- Generated slugs for 3 existing products that had none.
+- Created sitemap.ts: dynamic, lists home + compare + category pages + all active products with slugs. revalidate=3600.
+- Created robots.ts: allows all crawlers on /, disallows /admin and /api/, points to sitemap. Removed conflicting static public/robots.txt.
+- Verified: /producto/reloj-inteligente-deportivo-con-pantalla-amoled loads with correct title, 3 JSON-LD schemas (Product, BreadcrumbList, Review) in source, og:title/og:description/og:image/canonical all present, H1 + breadcrumbs + AI opinion + offers + similar products rendered. Content is in raw HTML (Google crawlable without JS). sitemap.xml generates dynamically. robots.txt works.
+- `bun run lint` clean.
+
+Stage Summary:
+- BLACKBOX now has indexable product pages. Google can crawl /producto/[slug] and see full content + structured data (Product, FAQ, Breadcrumb, Review schemas) for rich results. Sitemap + robots guide crawlers. This closes the #1 SEO gap from the audit. The SPA home/admin/comparar still work via Zustand; product cards now link to real SSR URLs when slug exists.
