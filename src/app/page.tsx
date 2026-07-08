@@ -8,9 +8,28 @@ import { SearchView } from "@/views/search-view";
 import { ProductView } from "@/views/product-view";
 import { CompareView } from "@/views/compare-view";
 import { AdminView } from "@/views/admin-view";
+import { ImportReviewView } from "@/views/import-review-view";
+import { decodeImportPayload } from "@/lib/bookmarklet";
+import { useEffect } from "react";
 
 export default function Home() {
   const view = useAppStore((s) => s.view);
+  const goImportReview = useAppStore((s) => s.goImportReview);
+
+  // Check for #import= hash (set by the bookmarklet) AFTER mount, because
+  // window.location is not available during SSR.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash;
+    if (hash.startsWith("#import=")) {
+      const payload = decodeImportPayload(hash);
+      if (payload && payload.name) {
+        // Clear the hash so it doesn't re-trigger
+        history.replaceState(null, "", window.location.pathname);
+        goImportReview(payload);
+      }
+    }
+  }, [goImportReview]);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -21,6 +40,7 @@ export default function Home() {
         {view.name === "product" && <ProductView key={view.productId} productId={view.productId} />}
         {view.name === "compare" && <CompareView productIds={view.productIds} />}
         {view.name === "admin" && <AdminView />}
+        {view.name === "import-review" && <ImportReviewView payload={view.payload} />}
       </main>
       <Footer />
     </div>

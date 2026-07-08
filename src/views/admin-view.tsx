@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AdminProducts } from "./admin-products";
 import { AdminHomeEditor } from "./admin-home-editor";
-import { Package, LayoutGrid, Link2, Sparkles, Save, Loader2, ShieldCheck } from "lucide-react";
+import { AdminBookmarklet } from "./admin-bookmarklet";
+import { Package, LayoutGrid, Link2, Sparkles, Save, Loader2, ShieldCheck, Bookmark } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -30,10 +31,14 @@ export function AdminView() {
       </div>
 
       <Tabs defaultValue="products">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5">
           <TabsTrigger value="products" className="gap-1.5">
             <Package className="h-4 w-4" />
             <span className="hidden sm:inline">Productos</span>
+          </TabsTrigger>
+          <TabsTrigger value="bookmarklet" className="gap-1.5">
+            <Bookmark className="h-4 w-4" />
+            <span className="hidden sm:inline">Marcador</span>
           </TabsTrigger>
           <TabsTrigger value="home" className="gap-1.5">
             <LayoutGrid className="h-4 w-4" />
@@ -51,6 +56,9 @@ export function AdminView() {
 
         <TabsContent value="products" className="mt-6">
           <AdminProducts />
+        </TabsContent>
+        <TabsContent value="bookmarklet" className="mt-6">
+          <AdminBookmarklet />
         </TabsContent>
         <TabsContent value="home" className="mt-6">
           <AdminHomeEditor />

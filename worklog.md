@@ -273,3 +273,21 @@ Work Log:
 
 Stage Summary:
 - The Control Center now lets you choose your AI provider. Default is the built-in z-ai (no config needed). Switch to "Google Gemini" and paste your API key from Google AI Studio (https://aistudio.google.com/app/apikey) — BLACKBOX will use Gemini for all AI: product analysis, scoring, recommendations, search intent, AND photo extraction (Gemini supports vision). The architecture is provider-agnostic: adding OpenAI/Claude later is just implementing the same chatComplete()/visionComplete() interface. Currently set back to z-ai so the AI keeps working; user can switch to Gemini anytime by pasting their real key.
+
+---
+Task ID: v2-bookmarklet
+Agent: main
+Task: Bookmarklet — one-click product import from any store, bypassing anti-bot
+
+Work Log:
+- Analyzed alternatives: n8n (Temu blocks Puppeteer too), Claude Computer Use (expensive, still blocked), bookmarklet (best — runs in user's real browser, no anti-bot).
+- Created src/lib/bookmarklet.ts: EXTRACTOR_SCRIPT reads product data from any store page DOM (JSON-LD, og: tags, price elements, images, h1). buildBookmarklet() generates a draggable bookmark link. decodeImportPayload() parses the #import=base64 hash.
+- Added import-review view to Zustand store (goImportReview + ImportPayload type).
+- Created ImportReviewView: receives bookmarklet payload, shows pre-filled form (name, price, brand, category, description, images), affiliate link preserved, "Guardar y analizar" button creates product + auto-generates AI score/recommendation.
+- Fixed SSR hydration issue: hash check moved to useEffect in page.tsx (window.location not available during SSR).
+- Added "Marcador" tab to Control Center (admin-bookmarklet.tsx): shows draggable bookmark link, copy button, step-by-step instructions, advantages explanation.
+- Verified end-to-end: simulated bookmarklet payload (Reloj Inteligente, S/129.90, FitWatch, temu.com URL) → opened BLACKBOX with #import=hash → import-review view appeared pre-filled → "Guardar y analizar" → POST /api/products 201 + POST /api/ai/score 200 (6.8s) + POST /api/ai/recommend 200 (7.6s) → product page with AI analysis.
+- `bun run lint` clean.
+
+Stage Summary:
+- The bookmarklet is the definitive solution for Temu/Amazon/Falabella product import. The admin drags "➕ Agregar a BLACKBOX" to their bookmarks bar, browses to any product page, clicks the bookmark — BLACKBOX opens with all data pre-filled, admin reviews and saves, AI analyzes automatically. No scraping, no anti-bot blocks, no photos needed. Works because it runs in the user's real browser where the page is already rendered. The affiliate link (page URL) is always preserved for monetization.

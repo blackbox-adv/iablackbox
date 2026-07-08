@@ -1,12 +1,27 @@
-// BLACKBOX client navigation store - manages view state + compare list
+// BLACKBOX client navigation store - manages view state + compare list + import
 import { create } from "zustand";
+import { decodeImportPayload } from "@/lib/bookmarklet";
+
+export interface ImportPayload {
+  name: string;
+  price: number | null;
+  currency: string | null;
+  originalPrice: number | null;
+  description: string;
+  brand: string;
+  images: string[];
+  category: string;
+  sourceUrl: string;
+  sourceDomain: string;
+}
 
 export type View =
   | { name: "home" }
   | { name: "search"; query: string }
   | { name: "product"; productId: string }
   | { name: "compare"; productIds?: string[] }
-  | { name: "admin" };
+  | { name: "admin" }
+  | { name: "import-review"; payload: ImportPayload };
 
 interface AppState {
   view: View;
@@ -17,14 +32,34 @@ interface AppState {
   goProduct: (productId: string) => void;
   goCompare: (productIds?: string[]) => void;
   goAdmin: () => void;
+  goImportReview: (payload: ImportPayload) => void;
   // compare list
   toggleCompare: (id: string) => void;
   clearCompare: () => void;
   isInCompare: (id: string) => boolean;
 }
 
+/**
+ * On first load in the browser, check for #import=... hash (set by the
+ * bookmarklet). If present, switch to the import-review view.
+ */
+function getInitialView(): View {
+  if (typeof window !== "undefined") {
+    const hash = window.location.hash;
+    if (hash.startsWith("#import=")) {
+      const payload = decodeImportPayload(hash);
+      if (payload && payload.name) {
+        // Clear the hash so it doesn't re-trigger on refresh
+        history.replaceState(null, "", window.location.pathname);
+        return { name: "import-review", payload };
+      }
+    }
+  }
+  return { name: "home" };
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
-  view: { name: "home" },
+  view: getInitialView(),
   compareIds: [],
 
   goHome: () => {
@@ -46,6 +81,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   goAdmin: () => {
     set({ view: { name: "admin" } });
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  },
+  goImportReview: (payload) => {
+    set({ view: { name: "import-review", payload } });
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   },
 
