@@ -380,3 +380,20 @@ Work Log:
 
 Stage Summary:
 - BLACKBOX now looks like a premium SaaS product (Perplexity + Apple + Linear inspired). Dark theme with layered tonal surfaces instead of flat black, glassmorphism, soft shadows, functional colors for important info, breathing room between sections, Perplexity-style hero search, AI recommendation card as the visual hero of product pages. All functionality preserved — no backend/API/DB/route changes.
+
+---
+Task ID: chat-ia-conversacional
+Agent: main
+Task: Conversational AI chat on product pages — the "wow" differentiator
+
+Work Log:
+- Created POST /api/ai/chat: receives {productId, question, history?}, fetches product + offers + AI score, builds real-data context, uses chatComplete() with system prompt that enforces "answer ONLY from real data, never invent". Supports conversation history (last 4 messages) for context.
+- Added useAiChat hook + ChatMessage type to use-blackbox.ts.
+- Created ProductChat component (client island for SSR page): premium Perplexity/ChatGPT style — glass card with emerald gradient + glow, pulse-glow AI icon, suggested questions pills (¿Vale la pena?, ¿Quién debería?, ¿Mejor tienda?, ¿Conviene esperar?, ¿Ventajas?, ¿Ha bajado de precio?), chat messages with user/assistant bubbles, animated typing indicator (bouncing dots), input with send button. Collapses suggestions after first message.
+- Inserted ProductChat into /producto/[slug] SSR page (right column, after offers).
+- Fixed dev server env loading issue (needed explicit DATABASE_URL export).
+- Verified end-to-end: "¿Vale la pena comprarlo?" → IA responded "Sí, vale la pena. Tienen un score de 91/100 y ANC a buen precio. Temu ofrece S/45.90 (ganga) pero Amazon tiene envío rápido..." (POST /api/ai/chat 200 in 4.3s). Follow-up "¿cuál es la mejor tienda?" → "La mejor tienda depende de tu prioridad: Temu tiene el mejor precio (S/45.90) pero envío lento... Amazon ofrece envío rápido..." — context-aware, real-data answers.
+- `bun run lint` clean.
+
+Stage Summary:
+- BLACKBOX now has a conversational AI advisor on every product page. Customers can ask "¿Vale la pena comprarlo?", "¿Cuándo baja de precio?", "¿Mejor alternativa?" and get instant answers based on real product data. This closes gap #3 from the audit (IA conversacional) and is the key differentiator vs simple price comparators — turns BLACKBOX into the "Perplexity of shopping". Works with z-ai (sandbox) or Gemini (production) via the unified ai-client.

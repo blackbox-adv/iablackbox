@@ -14,6 +14,7 @@ import { ClassificationBadge, StoreBadge } from "@/components/blackbox/badges";
 import { PriceBars } from "@/components/blackbox/price-bars";
 import { ProductCompareButton } from "@/components/site/product-compare-button";
 import { OfferButton } from "@/components/site/offer-button";
+import { ProductChat } from "@/components/site/product-chat";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -345,6 +346,9 @@ export default async function ProductPage({ params }: PageProps) {
                   Precios actualizados {offers[0] ? timeAgo(offers[0].updatedAt) : "—"} · Links de afiliado
                 </p>
               </div>
+
+              {/* ✨ Conversational AI chat — the "wow" differentiator */}
+              <ProductChat productId={product.id} />
             </div>
           </div>
 

@@ -206,6 +206,22 @@ export function useAiScore() {
   });
 }
 
+// V2: conversational AI chat about a product
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export function useAiChat() {
+  return useMutation({
+    mutationFn: (body: { productId: string; question: string; history?: ChatMessage[] }) =>
+      jfetch<{ answer: string; productId: string }>("/api/ai/chat", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+  });
+}
+
 export function useAiRecommend() {
   return useMutation({
     mutationFn: (body: { productId: string }) =>
