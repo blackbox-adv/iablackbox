@@ -79,61 +79,61 @@
   --sidebar-ring: oklch(0.78 0.18 162);
 }
 
-/* Premium dark theme — layered surfaces with depth, NOT flat black.
-   Inspired by Linear + Apple: tonal differentiation, soft shadows, glass. */
+/* Premium warm dark theme — NOT somber/tétrico. Layered warm surfaces with
+   depth, soft shadows, and glass. Inspired by Linear + Apple, but warmer. */
 .dark {
-  /* Base — deep charcoal, not pure black */
-  --background: oklch(0.14 0.005 264);          /* #0F1115-ish */
-  --foreground: oklch(0.97 0.004 264);
+  /* Base — warm dark grey, NOT black. Lighter than before for warmth. */
+  --background: oklch(0.17 0.008 250);          /* warm charcoal */
+  --foreground: oklch(0.96 0.004 250);
 
-  /* Surface 1 — elevated cards */
-  --card: oklch(0.185 0.006 264);               /* #151922-ish */
-  --card-foreground: oklch(0.97 0.004 264);
+  /* Surface 1 — cards: noticeably lighter than bg for depth */
+  --card: oklch(0.22 0.009 250);
+  --card-foreground: oklch(0.96 0.004 250);
 
-  /* Surface 2 — popovers, dialogs */
-  --popover: oklch(0.205 0.007 264);            /* #1B2130-ish */
-  --popover-foreground: oklch(0.97 0.004 264);
+  /* Surface 2 — popovers, dialogs: even lighter */
+  --popover: oklch(0.25 0.01 250);
+  --popover-foreground: oklch(0.96 0.004 250);
 
-  /* Primary — emerald (modern, trustworthy, not purple) */
-  --primary: oklch(0.82 0.17 162);
-  --primary-foreground: oklch(0.13 0.004 264);
+  /* Primary — vibrant emerald (trustworthy + energetic) */
+  --primary: oklch(0.84 0.19 160);
+  --primary-foreground: oklch(0.15 0.008 250);
 
   /* Secondary — subtle elevated */
-  --secondary: oklch(0.24 0.006 264);
-  --secondary-foreground: oklch(0.97 0.004 264);
+  --secondary: oklch(0.27 0.008 250);
+  --secondary-foreground: oklch(0.96 0.004 250);
 
-  /* Muted — text holders */
-  --muted: oklch(0.22 0.005 264);
-  --muted-foreground: oklch(0.72 0.01 264);
+  /* Muted — lighter for better text contrast (less tétrico) */
+  --muted: oklch(0.25 0.007 250);
+  --muted-foreground: oklch(0.78 0.01 250);
 
-  /* Accent — subtle highlight */
-  --accent: oklch(0.26 0.007 264);
-  --accent-foreground: oklch(0.97 0.004 264);
+  /* Accent — warmer highlight */
+  --accent: oklch(0.29 0.01 250);
+  --accent-foreground: oklch(0.96 0.004 250);
 
   --destructive: oklch(0.68 0.21 22);
-  --border: oklch(1 0 0 / 7%);
-  --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.82 0.17 162);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.84 0.19 160);
 
-  --chart-1: oklch(0.82 0.17 162);
+  --chart-1: oklch(0.84 0.19 160);
   --chart-2: oklch(0.85 0.16 100);
   --chart-3: oklch(0.82 0.15 70);
   --chart-4: oklch(0.72 0.2 40);
   --chart-5: oklch(0.65 0.22 350);
 
-  --sidebar: oklch(0.185 0.006 264);
-  --sidebar-foreground: oklch(0.97 0.004 264);
-  --sidebar-primary: oklch(0.82 0.17 162);
-  --sidebar-primary-foreground: oklch(0.13 0.004 264);
-  --sidebar-accent: oklch(0.24 0.006 264);
-  --sidebar-accent-foreground: oklch(0.97 0.004 264);
-  --sidebar-border: oklch(1 0 0 / 7%);
-  --sidebar-ring: oklch(0.82 0.17 162);
+  --sidebar: oklch(0.22 0.009 250);
+  --sidebar-foreground: oklch(0.96 0.004 250);
+  --sidebar-primary: oklch(0.84 0.19 160);
+  --sidebar-primary-foreground: oklch(0.15 0.008 250);
+  --sidebar-accent: oklch(0.27 0.008 250);
+  --sidebar-accent-foreground: oklch(0.96 0.004 250);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.84 0.19 160);
 
   /* Functional colors — only for important info */
-  --color-best-price: oklch(0.82 0.17 162);     /* green — mejor precio */
-  --color-ai-recommend: oklch(0.7 0.16 220);    /* blue — recomendado IA */
-  --color-offer: oklch(0.78 0.16 70);           /* orange — oferta */
+  --color-best-price: oklch(0.84 0.19 160);     /* green — mejor precio */
+  --color-ai-recommend: oklch(0.72 0.16 220);   /* blue — recomendado IA */
+  --color-offer: oklch(0.80 0.16 70);           /* orange — oferta */
   --color-high-price: oklch(0.68 0.21 22);      /* red — precio alto */
 }
 
@@ -173,18 +173,18 @@
     background-color: oklch(0.5 0.01 264 / 0.7);
   }
 
-  /* Glass effect — very subtle, for elevated cards */
+  /* Glass effect — warm, subtle, for elevated cards */
   .glass {
-    background: oklch(0.185 0.006 264 / 0.6);
+    background: oklch(0.22 0.009 250 / 0.65);
     backdrop-filter: blur(20px) saturate(140%);
     -webkit-backdrop-filter: blur(20px) saturate(140%);
-    border: 1px solid oklch(1 0 0 / 0.06);
+    border: 1px solid oklch(1 0 0 / 0.08);
   }
   .glass-strong {
-    background: oklch(0.205 0.007 264 / 0.8);
+    background: oklch(0.25 0.01 250 / 0.85);
     backdrop-filter: blur(24px) saturate(160%);
     -webkit-backdrop-filter: blur(24px) saturate(160%);
-    border: 1px solid oklch(1 0 0 / 0.08);
+    border: 1px solid oklch(1 0 0 / 0.1);
   }
 
   /* Soft shadows for depth */
@@ -223,10 +223,10 @@
     mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
   }
 
-  /* Surface variants */
-  .surface-1 { background: oklch(0.185 0.006 264); }
-  .surface-2 { background: oklch(0.205 0.007 264); }
-  .surface-3 { background: oklch(0.235 0.008 264); }
+  /* Surface variants — warm tones */
+  .surface-1 { background: oklch(0.22 0.009 250); }
+  .surface-2 { background: oklch(0.25 0.01 250); }
+  .surface-3 { background: oklch(0.28 0.011 250); }
 }
 
 /* Animations — subtle, premium */
@@ -261,9 +261,9 @@
 .animate-shimmer {
   background: linear-gradient(
     90deg,
-    oklch(0.18 0.005 264) 0%,
-    oklch(0.24 0.006 264) 50%,
-    oklch(0.18 0.005 264) 100%
+    oklch(0.22 0.009 250) 0%,
+    oklch(0.28 0.011 250) 50%,
+    oklch(0.22 0.009 250) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
