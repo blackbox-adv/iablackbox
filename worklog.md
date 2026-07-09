@@ -412,3 +412,85 @@ Work Log:
 
 Stage Summary:
 - Two more audit gaps closed: (1) historial de precios visible — chart with trend analysis on every product page, (2) comparador premium — glass table with automatic best-price highlighting. BLACKBOX now has: SEO pages + Supabase + IA conversacional + historial visible + comparador premium + diseño premium + import (bookmarklet/foto/URL) + 3 tiendas afiliadas + provider switching (z-ai/Gemini).
+
+---
+Task ID: f-api
+Agent: full-stack-developer
+Task: Build BLACKBOX V2 backend API routes for search logging + trends, user product contributions with admin approval, and AI-generated SEO landing pages.
+
+Work Log:
+- Read worklog.md (Tasks 1, 4, 5, v2, v2-fix, v2-temu-fix, v2-affiliate-fix, v2-photo, v2-gemini, v2-bookmarklet, seo-pages, supabase-migration, d3, redesign-premium, chat-ia-conversacional, history-and-comparator) and the existing helper/scraper/ai files: `src/lib/api-helpers.ts` (parseProduct/fetchProducts/fetchProductWithRelations/getAiTone/ensureUniqueSlug/refreshProduct), `src/lib/ai-client.ts` (chatComplete/getAiConfig), `src/lib/scraper/index.ts` (scrapeUrl/assertHasProductData/NoProductDataError), `src/lib/scraper/headless.ts` (headlessScrape/isHeadlessAvailable), `src/lib/ai-analysis.ts` (analyzeProduct/scrapedToAnalysisInput), `src/lib/constants.ts`, `src/lib/types.ts`, `prisma/schema.prisma` (Product V2 fields + SearchLog + LandingPage + contributionStatus/Source/contributorIp), `src/app/api/products/import/route.ts` (import pattern to mirror for contribute), `src/app/api/products/[id]/route.ts` + `src/app/api/admin/affiliates/[id]/route.ts` (async params pattern), `src/app/api/admin/scheduled-offers/route.ts` (mapper pattern), `src/app/api/search/route.ts`.
+- Created `src/app/api/search-log/route.ts` (POST): normalize query (lowercase + trim) → upsert SearchLog (existing row: count + 1, hasResults + lastSearched updated; new row: count = 1). Always 200 (best-effort, never blocks search — try/catch returns `{ success: true }` even on error).
+- Created `src/app/api/admin/trends/route.ts` (GET): returns `{ trends: [{ query, count, hasResults, lastSearched }] }` — top 20 SearchLog ordered by count DESC. Optional `?onlyEmpty=1` filters to `hasResults=false` (searches with no matching products → candidates for landing generation / new imports).
+- Created `src/app/api/products/contribute/route.ts` (POST): PUBLIC endpoint where users submit a product URL when search returns nothing.
+  - Validates URL with `/^https?:\/\//i` (400 otherwise).
+  - Resolves client IP from `x-forwarded-for` → `x-vercel-forwarded-for` → `"unknown"` (first entry of comma chain).
+  - Rate limit: max 3 user-contributed products per IP per 24h — counts Product rows where `contributionSource="user"`, `contributorIp=ip`, `createdAt > now-24h`. 429 with clear message if exceeded.
+  - Scrapes via `scrapeUrl` → `assertHasProductData` → if NoProductDataError → `headlessScrape` fallback (when available) → 422 with user-facing message if still no data.
+  - Reads `ai_tone` via `getAiTone()`, builds analysis input via `scrapedToAnalysisInput(scraped, [])`, calls `analyzeProduct`.
+  - Creates Product with `contributionStatus="pending"`, `contributionSource="user"`, `contributorIp=ip`, `isActive=false` (invisible until approved), `slug=ensureUniqueSlug(analysis.slug)`, all scraped + AI fields (mirror of import route).
+  - Creates Offer + PriceHistory when `scraped.price != null` (same shape as import).
+  - Creates AiScore from analysis.
+  - Returns `{ product, status: "pending", message }` with 201.
+- Created `src/app/api/admin/pending/route.ts` (GET): returns `{ products }` — products with `contributionStatus="pending"` ordered by createdAt DESC, includes offers (price asc) + latest aiScore, parsed via `parseProduct`.
+- Created `src/app/api/products/[id]/approve/route.ts` (POST): async params per Next.js 16; 404 if missing; sets `contributionStatus="approved"` + `isActive=true`; returns `{ product }` via `fetchProductWithRelations`.
+- Created `src/app/api/products/[id]/reject/route.ts` (POST): async params; 404 if missing; sets `contributionStatus="rejected"` + `isActive=false`; returns `{ success: true }`.
+- Created `src/app/api/admin/landings/route.ts` (GET): returns `{ landings }` — all LandingPage ordered by updatedAt DESC, with `body`/`faqs`/`productIds` JSON-parsed into typed arrays. Exports `LandingPageDTO` + a local `parseLanding` mapper.
+- Created `src/app/api/landings/generate/route.ts` (POST): AI-generates a complete SEO landing from a trending search query.
+  - Reads `ai_tone` via `getAiTone()`.
+  - Local `fetchRelatedProducts(query, 6)`: accent-insensitive search (diacritic normalization, same approach as `fetchProducts`) on name/description/brand/category/features, includes offers + latest aiScore. Returns parsed `Product[]` with `productIds` available.
+  - Local `ensureUniqueLandingSlug(slug)`: appends `-2`, `-3`, ... to avoid LandingPage.slug unique collisions (separate from Product slug space).
+  - Calls `chatComplete([{system}, {user}], undefined)` — system prompt enforces "Generas contenido SEO útil basado en datos reales. NUNCA inventes productos ni precios. Si no hay productos relacionados, genera contenido genérico útil sobre el tema." + JSON-only response. User prompt asks for `{ slug, title, metaTitle, metaDescription, h1, intro, body[{type,heading,content}], faqs[{q,a}] }` with explicit guidance (intro 1-2 paragraphs, body 4 sections: qué es / cómo elegir / mejores opciones / consejos, FAQs 4+ questions, all Spanish natural no keyword stuffing). Includes a real-data context block from `buildProductContext(products)` so the AI can reference real products (name, brand, category, best price, store, AI score, features) without inventing.
+  - Parses AI JSON via `extractJson` (tries direct parse, falls back to first `{...}` block).
+  - Validates/fallbacks every field (slug via `slugify`, title/h1 slice 200, metaTitle slice 70, metaDescription slice 165, intro slice 4000, body filtered to {type,heading,content} sections max 6, faqs filtered to {q,a} max 8).
+  - Creates LandingPage with `status="draft"`, `relatedQuery=query`, `productIds=JSON.stringify(ids)`. Returns `{ landing }` with 201.
+- Created `src/app/api/landings/[id]/route.ts` (GET + PUT + DELETE):
+  - GET: public lookup of a published landing. The `[id]` segment is treated as "slug-or-id" — tries `findUnique({ where: { slug: id } })` first, falls back to `findUnique({ where: { id } })`. 404 if not found OR `status !== "published"`. Includes parsed `body`/`faqs`/`productIds` and the related products (active only, from productIds, with offers + aiScore, preserving the AI's relevance order). Returns `{ landing, products }`.
+  - PUT: admin partial update — accepts title, metaTitle, metaDescription, h1, intro, body, faqs, status, category, productIds. JSON.stringifies arrays/objects. 404 if missing. Returns `{ landing }` (parsed).
+  - DELETE: 404 if missing; deletes; returns `{ success: true }`.
+  - **Consolidation note**: the spec asked for separate `src/app/api/landings/[id]/route.ts` (PUT/DELETE) and `src/app/api/landings/[slug]/route.ts` (GET). Next.js forbids different parameter names at the same dynamic path level ("You cannot use different slug names for the same dynamic path ('id' !== 'slug')"), so the public GET-by-slug handler was merged into the same `[id]/route.ts` file. The GET handler accepts either a slug or an id (slug lookup first, id fallback), preserving the spec's intent of `/api/landings/{slug-or-id}` returning the published landing.
+- Code style conformance across all 10 new files: `NextRequest`/`NextResponse` imports, async `params: Promise<{ id: string }>` with `const { id } = await params;` for dynamic routes, try/catch + `console.error` + JSON error responses with proper status codes, JSON.stringify for arrays/objects on DB write, JSON.parse with try/catch on read, no `any` outside the existing parseProduct pattern (the local `parseLanding`/`mapOffer`/`mapAiScore` mappers use `any` row params exactly like the existing `parseProduct`).
+- Did NOT touch: prisma/schema.prisma, src/lib/db.ts, src/lib/api-helpers.ts, src/lib/ai-client.ts, src/lib/ai-analysis.ts, src/lib/scraper/*, src/lib/constants.ts, src/lib/types.ts, any page.tsx / React component, any existing API route. Did NOT write test files.
+- Initial smoke test surfaced a Next.js routing error: "You cannot use different slug names for the same dynamic path ('id' !== 'slug')" because I had created both `src/app/api/landings/[id]/route.ts` (PUT/DELETE) and `src/app/api/landings/[slug]/route.ts` (GET). Fixed by deleting the `[slug]` folder and consolidating all three handlers (GET + PUT + DELETE) into the single `[id]/route.ts` file, with the GET handler doing slug-or-id lookup. After consolidation, `bun run lint` passes clean.
+- `bun run lint` passes with zero errors.
+
+Stage Summary:
+- Files created (10 new route files covering 11 endpoints — the GET-by-slug was consolidated into [id] due to the Next.js dynamic-path constraint):
+  - `src/app/api/search-log/route.ts` (POST)
+  - `src/app/api/admin/trends/route.ts` (GET)
+  - `src/app/api/products/contribute/route.ts` (POST)
+  - `src/app/api/admin/pending/route.ts` (GET)
+  - `src/app/api/products/[id]/approve/route.ts` (POST)
+  - `src/app/api/products/[id]/reject/route.ts` (POST)
+  - `src/app/api/admin/landings/route.ts` (GET)
+  - `src/app/api/landings/generate/route.ts` (POST — AI landing generator)
+  - `src/app/api/landings/[id]/route.ts` (GET published-by-slug-or-id + PUT update + DELETE)
+- Frontend agent can now wire:
+  - Search logging: POST `/api/search-log` after every search.
+  - Admin trends panel: GET `/api/admin/trends` (+ `?onlyEmpty=1` for "no-results" searches).
+  - "Aportar producto" CTA on the empty-search state: POST `/api/products/contribute` with `{ url }`.
+  - Admin "Aportes pendientes" queue: GET `/api/admin/pending` → POST `/api/products/[id]/approve` | `/api/products/[id]/reject`.
+  - Admin "Landings" CRUD: GET `/api/admin/landings` (list), POST `/api/landings/generate` (AI-generate from a trending query), PUT `/api/landings/[id]` (edit + set status="published"), DELETE `/api/landings/[id]`.
+  - Public landing page: GET `/api/landings/[slug]` returns the published landing + related products.
+- Lint passes clean. No files outside `src/app/api/` were modified.
+
+---
+Task ID: contributions-landings-trends
+Agent: main
+Task: User contribution flow + SEO landing pages + trend detection
+
+Work Log:
+- Schema: added SearchLog (query, count, hasResults, lastSearched), LandingPage (slug, title, metaTitle, metaDescription, h1, intro, body, faqs, relatedQuery, status, category, productIds), Product.contributionStatus (pending|approved|rejected), Product.contributionSource (admin|user), Product.contributorIp. Pushed to Supabase.
+- Backend (subagent f-api): 11 API routes — POST /api/search-log (log searches), GET /api/admin/trends (popular searches), POST /api/products/contribute (public URL submission with rate limit 3/day/IP, scraping + IA, creates pending product), GET /api/admin/pending, POST /api/products/[id]/approve, POST /api/products/[id]/reject, GET /api/admin/landings, POST /api/landings/generate (IA generates full landing from query), PUT/DELETE/GET /api/landings/[id].
+- Hooks: useTrends, usePendingProducts, useContribute, useApproveProduct, useRejectProduct, useLandings, useGenerateLanding, useUpdateLanding, useDeleteLanding.
+- SearchView: logs every search automatically (fire-and-forget POST /api/search-log). When no results, shows ContributeCard — user pastes URL → scraping + IA → product created as "pending" → user sees "¡Producto enviado!" confirmation. Rate limited (3/day/IP).
+- Admin Pending tab: lists pending products with image, name, source URL, price. Approve (→ published + visible + SEO) / Reject buttons.
+- Admin Trends tab: custom query generator (generate landing for any query), list of popular searches without products with "Generar landing" button.
+- Admin Landings tab: list landings with draft/published badge, preview link, publish/unpublish toggle, delete.
+- SSR /guia/[slug] route: server-rendered landing page with generateMetadata (title, description, OG, canonical), 4 schema.org JSON-LD types (Article, BreadcrumbList, FAQPage, ItemList), H1, intro, body sections, related products with score rings, FAQs, CTA. revalidate=3600 (ISR).
+- Sitemap: updated to include published landings + filter products by contributionStatus=approved.
+- Verified end-to-end: searched "minoxidil" → search logged (POST /api/search-log 200) → no results → contribution UI shown → generated landing via admin (POST /api/landings/generate 201 in 30s) → published via API → SSR page /guia/guia-completa-minoxidil renders with correct title, 3 JSON-LD schemas (Article, BreadcrumbList, FAQPage), H1, body sections, CTA → sitemap includes landing URL.
+- `bun run lint` clean.
+
+Stage Summary:
+- BLACKBOX now has a self-growing product database (users contribute URLs → admin approves) + SEO landing pages generated by IA from trending searches. The platform captures demand (search logging), creates content (IA landings), and grows its catalog (user contributions) — all controlled from the Control Center with 8 tabs: Productos, Pendientes, Tendencias, Landings, Marcador, Home, Afiliados, IA. Every landing and product page is SSR-indexable with schema.org for Google rich results.

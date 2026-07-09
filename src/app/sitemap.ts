@@ -10,7 +10,7 @@ export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const products = await db.product.findMany({
-    where: { isActive: true, slug: { not: null } },
+    where: { isActive: true, slug: { not: null }, contributionStatus: "approved" },
     select: { slug: true, updatedAt: true, category: true },
     orderBy: { updatedAt: "desc" },
   });
@@ -29,7 +29,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Category pages
   const categories = await db.product.findMany({
-    where: { isActive: true },
+    where: { isActive: true, contributionStatus: "approved" },
     select: { category: true },
     distinct: ["category"],
   });
@@ -40,5 +40,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticEntries, ...categoryEntries, ...productEntries];
+  // Landing pages (published guias)
+  const landings = await db.landingPage.findMany({
+    where: { status: "published" },
+    select: { slug: true, updatedAt: true },
+    orderBy: { updatedAt: "desc" },
+  });
+  const landingEntries: MetadataRoute.Sitemap = landings.map((l) => ({
+    url: `${SITE_URL}/guia/${l.slug}`,
+    lastModified: l.updatedAt,
+    changeFrequency: "weekly",
+    priority: 0.7,
+  }));
+
+  return [...staticEntries, ...categoryEntries, ...productEntries, ...landingEntries];
 }

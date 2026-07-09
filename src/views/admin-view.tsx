@@ -11,7 +11,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AdminProducts } from "./admin-products";
 import { AdminHomeEditor } from "./admin-home-editor";
 import { AdminBookmarklet } from "./admin-bookmarklet";
-import { Package, LayoutGrid, Link2, Sparkles, Save, Loader2, ShieldCheck, Bookmark } from "lucide-react";
+import { AdminPending } from "./admin-pending";
+import { AdminTrends } from "./admin-trends";
+import { AdminLandings } from "./admin-landings";
+import { Package, LayoutGrid, Link2, Sparkles, Save, Loader2, ShieldCheck, Bookmark, Clock, TrendingUp, FileText } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -31,10 +34,22 @@ export function AdminView() {
       </div>
 
       <Tabs defaultValue="products">
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5">
+        <TabsList className="flex w-full flex-wrap gap-1 h-auto p-1">
           <TabsTrigger value="products" className="gap-1.5">
             <Package className="h-4 w-4" />
             <span className="hidden sm:inline">Productos</span>
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="gap-1.5">
+            <Clock className="h-4 w-4" />
+            <span className="hidden sm:inline">Pendientes</span>
+          </TabsTrigger>
+          <TabsTrigger value="trends" className="gap-1.5">
+            <TrendingUp className="h-4 w-4" />
+            <span className="hidden sm:inline">Tendencias</span>
+          </TabsTrigger>
+          <TabsTrigger value="landings" className="gap-1.5">
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">Landings</span>
           </TabsTrigger>
           <TabsTrigger value="bookmarklet" className="gap-1.5">
             <Bookmark className="h-4 w-4" />
@@ -56,6 +71,15 @@ export function AdminView() {
 
         <TabsContent value="products" className="mt-6">
           <AdminProducts />
+        </TabsContent>
+        <TabsContent value="pending" className="mt-6">
+          <AdminPending />
+        </TabsContent>
+        <TabsContent value="trends" className="mt-6">
+          <AdminTrends />
+        </TabsContent>
+        <TabsContent value="landings" className="mt-6">
+          <AdminLandings />
         </TabsContent>
         <TabsContent value="bookmarklet" className="mt-6">
           <AdminBookmarklet />
