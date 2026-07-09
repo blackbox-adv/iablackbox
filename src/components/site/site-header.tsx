@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search, GitCompare, Settings, Boxes, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/site/theme-toggle";
 import { useCompareCount } from "@/hooks/use-compare-count";
 import { useState, type FormEvent } from "react";
 
@@ -58,6 +59,7 @@ export function SiteHeader() {
               <span className="hidden sm:inline">Control</span>
             </Link>
           </Button>
+          <ThemeToggle />
         </div>
       </div>
       <div className="border-t border-border/40 bg-emerald-500/5">

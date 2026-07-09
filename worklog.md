@@ -519,3 +519,23 @@ Work Log:
 
 Stage Summary:
 - Everything works end-to-end. Design is now warmer and less tétrico while maintaining premium dark mode. All features verified: home, product SSR with chat+history+offers, search with contribution, comparator, admin 8 tabs, landing SSR with schema.org.
+
+---
+Task ID: light-mode-toggle
+Agent: main
+Task: Light mode as default + dark mode toggle (user preference)
+
+Work Log:
+- Redesigned :root (light) theme in globals.css: warm off-white background (oklch 0.98), pure white cards for depth, deep emerald primary (0.55) for premium trust, good text contrast (muted-foreground 0.5), visible borders (0.9), light-mode glass variables (--glass-bg white/0.7).
+- Dark theme kept as .dark class with warm charcoal (0.17), same as previous warm dark but with glass variables.
+- Glass utilities (.glass, .glass-strong) now use CSS variables so they adapt automatically to light/dark.
+- Shadows lightened for light mode (shadow-soft uses 6%/4% opacity, not 30%/20%).
+- text-gradient uses deeper emerald (0.5) visible on light bg. bg-grid/bg-dots use black opacity (adapts to both themes).
+- Added ThemeProvider (next-themes, defaultTheme="light", enableSystem=false, disableTransitionOnChange) in layout.tsx wrapping everything.
+- Removed hardcoded className="dark" from <html> — now dynamic via next-themes.
+- Created ThemeToggle component (Sun/Moon icons, hydration-safe with suppressHydrationWarning). Added to both SPA Header and SSR SiteHeader.
+- Verified: home loads in light mode by default (html class="light", bg warm white). Toggle switches to "dark" instantly and persists (localStorage). VLM confirmed: "premium, limpio, confiable, accesible, optimista — atrae más que modo oscuro tétrico".
+- `bun run lint` clean.
+
+Stage Summary:
+- BLACKBOX now defaults to a premium light mode (Apple/Stripe style — warm off-white, deep emerald accents, white cards for depth) which converts better for shopping. Users can toggle to dark mode anytime via the Sun/Moon button in the header, and their preference persists. Both themes use the same glass/shadow/surface system via CSS variables.

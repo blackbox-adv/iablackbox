@@ -2,6 +2,7 @@
 
 import { useAppStore } from "@/lib/store";
 import { Search, GitCompare, Settings, Boxes, Sparkles } from "lucide-react";
+import { ThemeToggle } from "@/components/site/theme-toggle";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -82,6 +83,7 @@ export function Header() {
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Control</span>
           </Button>
+          <ThemeToggle />
         </div>
       </div>
       {/* AI strip */}
