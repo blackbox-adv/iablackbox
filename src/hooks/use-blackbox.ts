@@ -4,11 +4,39 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Product, HomeSection, AffiliateLink, AiScore, Classification } from "@/lib/types";
 
 // ---------- fetch helpers ----------
+
+/** Read the admin token from localStorage (set by the admin panel). */
+function getAdminToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem("bb-admin-token");
+  } catch {
+    return null;
+  }
+}
+
+/** Check if a URL is an admin/mutation route that needs the token. */
+function needsAdminToken(url: string): boolean {
+  return (
+    url.includes("/api/admin/") ||
+    (url.includes("/api/products") && (url.includes("import") || url.includes("refresh") || url.includes("bulk") || url.includes("feature") || url.includes("approve") || url.includes("reject"))) ||
+    url.includes("/api/landings/generate") ||
+    (url.includes("/api/landings/") && !url.includes("/api/landings?")) ||
+    url.includes("/api/ai/score")
+  );
+}
+
 async function jfetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-  });
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init?.headers as Record<string, string>),
+  };
+  // Attach admin token automatically for protected routes
+  if (needsAdminToken(url)) {
+    const token = getAdminToken();
+    if (token) headers["x-admin-token"] = token;
+  }
+  const res = await fetch(url, { ...init, headers });
   if (!res.ok) {
     const txt = await res.text().catch(() => "");
     throw new Error(txt || `Error ${res.status}`);

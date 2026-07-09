@@ -14,7 +14,8 @@ import { AdminBookmarklet } from "./admin-bookmarklet";
 import { AdminPending } from "./admin-pending";
 import { AdminTrends } from "./admin-trends";
 import { AdminLandings } from "./admin-landings";
-import { Package, LayoutGrid, Link2, Sparkles, Save, Loader2, ShieldCheck, Bookmark, Clock, TrendingUp, FileText } from "lucide-react";
+import { AdminSecurity } from "./admin-security";
+import { Package, LayoutGrid, Link2, Sparkles, Save, Loader2, ShieldCheck, Bookmark, Clock, TrendingUp, FileText, Lock } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -67,6 +68,10 @@ export function AdminView() {
             <Sparkles className="h-4 w-4" />
             <span className="hidden sm:inline">IA</span>
           </TabsTrigger>
+          <TabsTrigger value="security" className="gap-1.5">
+            <Lock className="h-4 w-4" />
+            <span className="hidden sm:inline">Seguridad</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="products" className="mt-6">
@@ -92,6 +97,9 @@ export function AdminView() {
         </TabsContent>
         <TabsContent value="ai" className="mt-6">
           <AdminAiSettings />
+        </TabsContent>
+        <TabsContent value="security" className="mt-6">
+          <AdminSecurity />
         </TabsContent>
       </Tabs>
     </div>

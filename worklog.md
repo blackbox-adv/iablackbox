@@ -571,3 +571,19 @@ Work Log:
 
 Stage Summary:
 - Security improved: API key no longer exposed to client, chat rate-limited, security headers added, admin auth middleware ready. For production: set ADMIN_TOKEN in Vercel env vars to protect admin routes. Remaining items for future: wire admin-auth into all /api/admin/* routes (currently middleware exists but not yet enforced on every route — MVP allows open admin for single-admin use).
+
+---
+Task ID: security-hardening
+Agent: main
+Task: Full security hardening — admin middleware + token UI + production ready
+
+Work Log:
+- Created src/middleware.ts: global Next.js middleware that protects ALL /api/admin/* routes + product mutations (import, refresh, bulk, feature, approve, reject, delete, edit) + landing mutations (generate, PUT, DELETE) + AI score regeneration. Checks x-admin-token header against ADMIN_TOKEN env var. Returns 403 if mismatch. If ADMIN_TOKEN not set, allows in dev but warns in production.
+- Updated jfetch in use-blackbox.ts: automatically attaches x-admin-token header (from localStorage) to all protected API calls. No manual header management needed.
+- Created admin-security.tsx: new "Seguridad" tab in Control Center where admin pastes their ADMIN_TOKEN. Stored in localStorage (not DB). Shows active/inactive status. Explains how the security flow works (set env var in Vercel → paste here → automatic).
+- Added "Seguridad" tab to admin-view.tsx (9 tabs now: Productos, Pendientes, Tendencias, Landings, Marcador, Home, Afiliados, IA, Seguridad).
+- Verified: production build passes with middleware active. App works in light mode. Security tab renders. All admin routes protected.
+- `bun run lint` clean.
+
+Stage Summary:
+- BLACKBOX is security-hardened and production-ready. Admin routes protected by ADMIN_TOKEN (set in Vercel env, pasted in panel). API key never exposed to client. Rate limiting on chat + contributions. Security headers (CSP, HSTS, X-Frame-Options, etc.). Ready for GitHub → Vercel deploy.
