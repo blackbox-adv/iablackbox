@@ -17,14 +17,47 @@ interface ChatBody {
   history?: Array<{ role: "user" | "assistant"; content: string }>;
 }
 
+// Simple in-memory rate limit: 20 chat requests per IP per 5 minutes.
+// Prevents abuse of the (costly) AI endpoint.
+const RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5 min
+const RATE_LIMIT_MAX = 20;
+const ipHits = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const hit = ipHits.get(ip);
+  if (!hit || now > hit.resetAt) {
+    ipHits.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+  if (hit.count >= RATE_LIMIT_MAX) return false;
+  hit.count++;
+  return true;
+}
+
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json(
+        { error: "Demasiadas preguntas. Intenta de nuevo en unos minutos." },
+        { status: 429 }
+      );
+    }
+
     const body = (await req.json().catch(() => null)) as ChatBody | null;
     if (!body?.productId || !body?.question?.trim()) {
       return NextResponse.json(
         { error: "Se requiere productId y question" },
         { status: 400 }
       );
+    }
+
+    // Limit question length to prevent abuse
+    const question = body.question.trim().slice(0, 500);
+    if (question.length < 2) {
+      return NextResponse.json({ error: "Pregunta muy corta" }, { status: 400 });
     }
 
     // Fetch product with offers + latest AI score
@@ -94,7 +127,7 @@ REGLAS:
         messages.push({ role: h.role, content: h.content });
       }
     }
-    messages.push({ role: "user", content: body.question.trim() });
+    messages.push({ role: "user", content: question });
 
     const answer = await chatComplete(messages);
 
