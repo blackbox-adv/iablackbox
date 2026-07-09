@@ -539,3 +539,18 @@ Work Log:
 
 Stage Summary:
 - BLACKBOX now defaults to a premium light mode (Apple/Stripe style — warm off-white, deep emerald accents, white cards for depth) which converts better for shopping. Users can toggle to dark mode anytime via the Sun/Moon button in the header, and their preference persists. Both themes use the same glass/shadow/surface system via CSS variables.
+
+---
+Task ID: vercel-deploy-prep
+Agent: main
+Task: Prepare BLACKBOX for Vercel deployment
+
+Work Log:
+- Verified production build: `next build` succeeds, all 30+ routes compile (SSR product/landing pages, 25 API routes, static robots/sitemap).
+- Created .env.example with the 3 env vars needed: DATABASE_URL (Supabase), NEXT_PUBLIC_SITE_URL (for SEO/sitemap), GEMINI_API_KEY (optional, for production IA).
+- Updated ai-client.ts getAiConfig(): now falls back to process.env.GEMINI_API_KEY — if you set GEMINI_API_KEY in Vercel env vars, BLACKBOX uses Gemini automatically without needing to configure the panel. DB settings still take priority if set.
+- Verified dev server still runs correctly after build (light mode default, products load, toggle works).
+- `bun run lint` clean. Build output is Vercel-compatible (output: "standalone").
+
+Stage Summary:
+- BLACKBOX is production-ready. Build passes, all features work. Next step is deploying to Vercel with 3 environment variables.

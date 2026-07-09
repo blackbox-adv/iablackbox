@@ -30,15 +30,23 @@ export interface AiConfig {
   tone: string; // simple | tecnico | vendedor | neutral
 }
 
-/** Read the current AI configuration from the AiSetting table. */
+/** Read the current AI configuration from the AiSetting table.
+ *  Falls back to env vars (useful for Vercel deployment). */
 export async function getAiConfig(): Promise<AiConfig> {
   const rows = await db.aiSetting.findMany({
     where: { key: { in: ["ai_provider", "ai_api_key", "ai_model", "ai_tone"] } },
   });
   const map = new Map(rows.map((r) => [r.key, r.value]));
+
+  // Env var fallback: if GEMINI_API_KEY is set in the environment (Vercel),
+  // use Gemini automatically. This lets admins deploy without configuring
+  // the panel — just set the env var in Vercel.
+  const envGeminiKey = process.env.GEMINI_API_KEY;
+  const dbApiKey = map.get("ai_api_key") || null;
+
   return {
-    provider: (map.get("ai_provider") as AiProvider) || "z-ai",
-    apiKey: map.get("ai_api_key") || null,
+    provider: (map.get("ai_provider") as AiProvider) || (envGeminiKey ? "gemini" : "z-ai"),
+    apiKey: dbApiKey || envGeminiKey || null,
     model: map.get("ai_model") || "gemini-2.0-flash",
     tone: map.get("ai_tone") || "simple",
   };
